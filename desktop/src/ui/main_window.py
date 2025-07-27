@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt
 
 # Import modular feature components
 from .features.desktop import (
-    HeaderPanel, ClipboardPanel, NotesPanel
+    HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -56,11 +56,13 @@ class MainWindow(QMainWindow):
         # Create feature components
         self.header = HeaderPanel()
         self.clipboard_panel = ClipboardPanel()
+        self.enhance_prompt_panel = EnhancePromptPanel()
         self.notes_panel = NotesPanel()
         
         # Add components to layout
         self.main_layout.addWidget(self.header)
         self.main_layout.addWidget(self.clipboard_panel)
+        self.main_layout.addWidget(self.enhance_prompt_panel)
         self.main_layout.addWidget(self.notes_panel)
         
         
@@ -80,6 +82,10 @@ class MainWindow(QMainWindow):
         self.notes_panel.note_deleted.connect(self.on_note_deleted)
         self.notes_panel.notes_loaded.connect(self.on_notes_loaded)
         self.notes_panel.error_occurred.connect(self.on_notes_error)
+        
+        # Enhance Prompt connections
+        self.enhance_prompt_panel.prompt_enhanced.connect(self.on_prompt_enhanced)
+        self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -166,6 +172,15 @@ class MainWindow(QMainWindow):
     def on_notes_error(self, error_message):
         """Handle notes error event"""
         print(f"Notes error: {error_message}")
+        
+    def on_prompt_enhanced(self, result_data):
+        """Handle prompt enhanced event"""
+        enhanced_prompt = result_data.get('enhancedPrompt', '')
+        print(f"Prompt enhanced: {enhanced_prompt[:50]}...")
+        
+    def on_enhance_prompt_error(self, error_message):
+        """Handle enhance prompt error event"""
+        print(f"Enhance prompt error: {error_message}")
         
     def closeEvent(self, event):
         """Handle application close event"""

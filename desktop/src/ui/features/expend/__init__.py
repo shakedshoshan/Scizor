@@ -6,9 +6,11 @@ Contains enhanced UI components for the Scizor expanded window
 from .enhanced_clipboard_panel import EnhancedClipboardPanel
 from .enhanced_notes_panel import EnhancedNotesPanel
 from .enhanced_header_panel import EnhancedHeaderPanel
+from .enhanced_enhance_prompt_panel import EnhancedEnhancePromptPanel
 
 __all__ = [
     'EnhancedClipboardPanel',
     'EnhancedNotesPanel', 
     'EnhancedHeaderPanel',
+    'EnhancedEnhancePromptPanel',
 ] 

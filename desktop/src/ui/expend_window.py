@@ -14,7 +14,7 @@ from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
 # Import enhanced feature components
 from .features.expend import (
-    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel
+    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel, EnhancedEnhancePromptPanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -100,10 +100,12 @@ class ExpandedWindow(QMainWindow):
         
         # Create enhanced feature panels
         self.clipboard_panel = EnhancedClipboardPanel()
+        self.enhance_prompt_panel = EnhancedEnhancePromptPanel()
         self.notes_panel = EnhancedNotesPanel()
         
         # Create tab pages
         self.setup_clipboard_tab()
+        self.setup_enhance_prompt_tab()
         self.setup_notes_tab()
         
         # Add widgets to main layout
@@ -133,6 +135,18 @@ class ExpandedWindow(QMainWindow):
         notes_layout.addWidget(self.notes_panel)
         
         self.content_tabs.addTab(notes_widget, "📝 Enhanced Notes")
+        
+    def setup_enhance_prompt_tab(self):
+        """Setup the enhanced prompt enhancement tab"""
+        enhance_prompt_widget = QWidget()
+        enhance_prompt_layout = QVBoxLayout(enhance_prompt_widget)
+        enhance_prompt_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Add enhance prompt panel with proper sizing
+        self.enhance_prompt_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        enhance_prompt_layout.addWidget(self.enhance_prompt_panel)
+        
+        self.content_tabs.addTab(enhance_prompt_widget, "🚀 AI Prompt Enhancement")
        
     def setup_connections(self):
         """Setup signal connections between components"""
@@ -150,6 +164,10 @@ class ExpandedWindow(QMainWindow):
         self.notes_panel.note_deleted.connect(self.on_note_deleted)
         self.notes_panel.notes_loaded.connect(self.on_notes_loaded)
         self.notes_panel.error_occurred.connect(self.on_notes_error)
+        
+        # Enhance Prompt connections
+        self.enhance_prompt_panel.prompt_enhanced.connect(self.on_prompt_enhanced)
+        self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for expanded window control"""
@@ -254,6 +272,15 @@ class ExpandedWindow(QMainWindow):
     def on_notes_error(self, error_message):
         """Handle notes error event"""
         self.status_label.setText(f"Error: {error_message}")
+        
+    def on_prompt_enhanced(self, result_data):
+        """Handle prompt enhanced event"""
+        enhanced_prompt = result_data.get('enhancedPrompt', '')
+        self.status_label.setText(f"Prompt enhanced: {enhanced_prompt[:50]}...")
+        
+    def on_enhance_prompt_error(self, error_message):
+        """Handle enhance prompt error event"""
+        self.status_label.setText(f"Enhance prompt error: {error_message}")
         
         
     def showEvent(self, event):

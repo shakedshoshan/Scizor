@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
         """Setup signal connections between feature components"""
         # Header connections
         self.header.close_requested.connect(self.close)
+        self.header.expand_requested.connect(self.open_expanded_window)
         
         # Clipboard connections
         self.clipboard_panel.clipboard_cleared.connect(self.on_clipboard_cleared)
@@ -113,6 +114,17 @@ class MainWindow(QMainWindow):
         
         # Create the note using the notes panel
         self.notes_panel.create_note_from_text(selected_text)
+        
+    def open_expanded_window(self):
+        """Open the expanded dashboard window"""
+        try:
+            from .expend_window import ExpandedWindow
+            self.expanded_window = ExpandedWindow(self)
+            self.expanded_window.show()
+            self.expanded_window.raise_()
+            self.expanded_window.activateWindow()
+        except Exception as e:
+            print(f"Error opening expanded window: {e}")
         
     def position_on_right_side(self):
         """Position the window on the right side of the screen"""

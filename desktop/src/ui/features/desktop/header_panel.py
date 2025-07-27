@@ -9,10 +9,11 @@ from PyQt6.QtCore import Qt, pyqtSignal
 
 
 class HeaderPanel(QFrame):
-    """Header panel with title and close button"""
+    """Header panel with title, expand button, and close button"""
     
     # Signals
-    close_requested = pyqtSignal() 
+    close_requested = pyqtSignal()
+    expand_requested = pyqtSignal()
     
     def __init__(self, parent=None):
         """Initialize the header panel"""
@@ -43,6 +44,24 @@ class HeaderPanel(QFrame):
             }
         """)
         
+        # Expand button
+        self.expand_btn = QPushButton("⤢")
+        self.expand_btn.setFixedSize(25, 25)
+        self.expand_btn.setToolTip("Open Expanded Dashboard")
+        self.expand_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        
         # Close button
         self.close_btn = QPushButton("×")
         self.close_btn.setFixedSize(25, 25)
@@ -62,10 +81,12 @@ class HeaderPanel(QFrame):
         
         layout.addWidget(self.title_label)
         layout.addStretch()
+        layout.addWidget(self.expand_btn)
         layout.addWidget(self.close_btn)
         
     def setup_connections(self):
         """Setup signal connections"""
+        self.expand_btn.clicked.connect(self.expand_requested.emit)
         self.close_btn.clicked.connect(self.close_requested.emit)
         
     def set_title(self, title):

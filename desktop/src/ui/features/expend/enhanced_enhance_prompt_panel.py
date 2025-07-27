@@ -5,13 +5,13 @@ Advanced UI component for enhancing prompts using AI in the expanded window
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, 
+    QGroupBox, QVBoxLayout, QHBoxLayout, QTextEdit, 
     QPushButton, QComboBox, QLabel, QLineEdit,
     QProgressBar, QMessageBox, QFrame, QScrollArea,
-    QGroupBox, QGridLayout, QSplitter, QTabWidget
+    QWidget, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont, QPalette, QColor, QTextCursor
+from PyQt6.QtGui import QFont, QPalette, QColor
 import sys
 import os
 
@@ -28,7 +28,6 @@ class EnhancedEnhancePromptWorker(QThread):
     enhanced = pyqtSignal(dict)  # Enhanced prompt result
     error = pyqtSignal(str)      # Error message
     finished = pyqtSignal()      # Thread finished
-    progress = pyqtSignal(str)   # Progress updates
     
     def __init__(self, service: EnhancePromptService, prompt: str):
         super().__init__()
@@ -38,11 +37,9 @@ class EnhancedEnhancePromptWorker(QThread):
     def run(self):
         """Run the enhancement in background thread"""
         try:
-            self.progress.emit("Preparing enhancement request...")
             result = self.service.enhance_prompt(
                 self.prompt,
             )
-            self.progress.emit("Enhancement completed successfully!")
             self.enhanced.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -50,115 +47,185 @@ class EnhancedEnhancePromptWorker(QThread):
             self.finished.emit()
 
 
-class EnhancedEnhancePromptPanel(QWidget):
+class EnhancedPromptCard(QFrame):
+    """Card widget to display enhanced prompt results"""
+    
+    def __init__(self, enhanced_prompt: str, original_prompt: str, parent=None):
+        super().__init__(parent)
+        self.enhanced_prompt = enhanced_prompt
+        self.original_prompt = original_prompt
+        self.setup_ui()
+        
+    def setup_ui(self):
+        """Setup the enhanced prompt card UI"""
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(120)
+        self.setMaximumHeight(200)
+        
+        # Card styling to match notes panel
+        self.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border: none;
+                border-radius: 8px;
+                margin: 4px;
+            }
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
+        
+        # Header with title
+        header_layout = QHBoxLayout()
+        
+        title_label = QLabel("Enhanced Prompt")
+        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #2c3e50;")
+        
+        # Copy button
+        copy_btn = QPushButton("Copy")
+        copy_btn.setFixedSize(50, 25)
+        copy_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+        """)
+        copy_btn.clicked.connect(self.copy_enhanced_prompt)
+        
+        header_layout.addWidget(title_label, 1)
+        header_layout.addWidget(copy_btn)
+        
+        # Enhanced prompt content
+        content_label = QLabel(self.enhanced_prompt)
+        content_label.setWordWrap(True)
+        content_label.setStyleSheet("""
+            color: #34495e;
+            font-size: 11px;
+            line-height: 1.4;
+            padding: 4px 0;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px;
+        """)
+        
+        # Original prompt reference
+        original_text = f"Original: {self.original_prompt[:50]}{'...' if len(self.original_prompt) > 50 else ''}"
+        original_label = QLabel(original_text)
+        original_label.setStyleSheet("""
+            color: #7f8c8d;
+            font-size: 10px;
+            font-style: italic;
+        """)
+        
+        # Add all widgets to layout
+        layout.addLayout(header_layout)
+        layout.addWidget(content_label, 1)
+        layout.addWidget(original_label)
+        
+    def copy_enhanced_prompt(self):
+        """Copy enhanced prompt to clipboard"""
+        from PyQt6.QtWidgets import QApplication
+        QApplication.clipboard().setText(self.enhanced_prompt)
+        
+        # Show brief feedback
+        QMessageBox.information(self, "Copied", "Enhanced prompt copied to clipboard!")
+
+
+class EnhancedEnhancePromptPanel(QGroupBox):
     """Enhanced panel for enhancing prompts using AI"""
     
     # Signals
     prompt_enhanced = pyqtSignal(dict)  # Enhanced prompt result
     error_occurred = pyqtSignal(str)    # Error message
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__("🤖 Enhanced AI Prompt Enhancer", parent)
         self.enhance_service = EnhancePromptService()
         self.worker = None
-        self.init_ui()
+        self.enhanced_prompts = []
+        self.prompt_cards = {}
+        self.setup_ui()
         self.setup_connections()
         
-    def init_ui(self):
-        """Initialize the enhanced UI components"""
-        # Main layout
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(10)
-        
-        # Title
-        title = QLabel("AI Prompt Enhancement")
-        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("color: #2c3e50; margin-bottom: 10px;")
-        main_layout.addWidget(title)
-        
-        # Create splitter for better layout
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        main_layout.addWidget(splitter)
-        
-        # Left panel - Input and controls
-        left_panel = self.create_input_panel()
-        splitter.addWidget(left_panel)
-        
-        # Right panel - Results and history
-        right_panel = self.create_results_panel()
-        splitter.addWidget(right_panel)
-        
-        # Set splitter proportions
-        splitter.setSizes([400, 600])
-        
-        # Status bar
-        self.status_label = QLabel("Ready to enhance prompts")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: #7f8c8d;
-                font-size: 11px;
-                padding: 5px;
-                background-color: #ecf0f1;
-                border-radius: 4px;
-            }
-        """)
-        main_layout.addWidget(self.status_label)
-        
-        # Set panel style
+    def setup_ui(self):
+        """Setup the enhanced UI components"""
         self.setStyleSheet("""
-            QWidget {
-                background-color: #ffffff;
-                border: 1px solid #bdc3c7;
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #27ae60;
                 border-radius: 8px;
+                margin-top: 15px;
+                padding-top: 15px;
+                background-color: #f8f9fa;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 15px;
+                padding: 0 8px 0 8px;
+                color: #2c3e50;
             }
         """)
         
-    def create_input_panel(self):
-        """Create the input panel with controls"""
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 20, 10, 10)
         layout.setSpacing(10)
         
-        # Prompt input group
-        prompt_group = QGroupBox("Original Prompt")
-        prompt_group.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        prompt_layout = QVBoxLayout(prompt_group)
+        # Input section
+        input_frame = QFrame()
+        input_frame.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                padding: 8px;
+            }
+        """)
+        input_layout = QVBoxLayout(input_frame)
+        input_layout.setContentsMargins(8, 8, 8, 8)
+        
+        # Prompt input
+        prompt_label = QLabel("📝 Enter your prompt:")
+        prompt_label.setStyleSheet("color: #2c3e50; font-weight: bold; font-size: 11px;")
         
         self.prompt_input = QTextEdit()
-        self.prompt_input.setPlaceholderText("Enter your prompt here...\n\nTips:\n• Be specific about what you want\n• Include relevant context\n• Specify your target audience")
-        self.prompt_input.setMinimumHeight(150)
+        self.prompt_input.setPlaceholderText("Type your prompt here...")
+        self.prompt_input.setMaximumHeight(100)
         self.prompt_input.setStyleSheet("""
             QTextEdit {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 10px;
-                font-size: 12px;
-                line-height: 1.4;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 11px;
+                background-color: white;
             }
             QTextEdit:focus {
                 border-color: #3498db;
             }
         """)
-        prompt_layout.addWidget(self.prompt_input)
-        
-        layout.addWidget(prompt_group)
         
         # Action buttons
         button_layout = QHBoxLayout()
         
-        self.enhance_button = QPushButton("🚀 Enhance Prompt")
-        self.enhance_button.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        self.enhance_button = QPushButton("🚀 Enhance")
         self.enhance_button.setStyleSheet("""
             QPushButton {
                 background-color: #27ae60;
                 color: white;
                 border: none;
-                padding: 12px 24px;
-                border-radius: 6px;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-size: 11px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -170,38 +237,25 @@ class EnhancedEnhancePromptPanel(QWidget):
             }
         """)
         
-        self.clear_button = QPushButton("🗑️ Clear All")
+        self.clear_button = QPushButton("🗑️ Clear")
         self.clear_button.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
                 color: white;
                 border: none;
-                padding: 12px 24px;
-                border-radius: 6px;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-size: 11px;
+                font-weight: bold;
             }
             QPushButton:hover {
                 background-color: #c0392b;
             }
         """)
         
-        self.paste_button = QPushButton("📋 Paste from Clipboard")
-        self.paste_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
-        
         button_layout.addWidget(self.enhance_button)
-        button_layout.addWidget(self.paste_button)
         button_layout.addWidget(self.clear_button)
-        layout.addLayout(button_layout)
+        button_layout.addStretch()
         
         # Progress bar
         self.progress_bar = QProgressBar()
@@ -209,122 +263,67 @@ class EnhancedEnhancePromptPanel(QWidget):
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
         self.progress_bar.setStyleSheet("""
             QProgressBar {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
                 text-align: center;
                 background-color: #ecf0f1;
             }
             QProgressBar::chunk {
                 background-color: #3498db;
-                border-radius: 4px;
+                border-radius: 3px;
             }
         """)
-        layout.addWidget(self.progress_bar)
         
-        return panel
+        input_layout.addWidget(prompt_label)
+        input_layout.addWidget(self.prompt_input)
+        input_layout.addLayout(button_layout)
+        input_layout.addWidget(self.progress_bar)
         
-    def create_results_panel(self):
-        """Create the results panel with tabs"""
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(10, 10, 10, 10)
-        
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 2px solid #bdc3c7;
+        # Enhanced prompts scroll area
+        self.prompts_scroll = QScrollArea()
+        self.prompts_scroll.setWidgetResizable(True)
+        self.prompts_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.prompts_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.prompts_scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                background-color: #f1f1f1;
+                width: 12px;
                 border-radius: 6px;
-                background-color: #ffffff;
             }
-            QTabBar::tab {
-                background-color: #ecf0f1;
-                padding: 8px 16px;
-                margin-right: 2px;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
+            QScrollBar::handle:vertical {
+                background-color: #c1c1c1;
+                border-radius: 6px;
+                min-height: 20px;
             }
-            QTabBar::tab:selected {
-                background-color: #3498db;
-                color: white;
+            QScrollBar::handle:vertical:hover {
+                background-color: #a8a8a8;
             }
-        """)
-        
-        # Enhanced prompt tab
-        self.result_display = QTextEdit()
-        self.result_display.setReadOnly(True)
-        self.result_display.setStyleSheet("""
-            QTextEdit {
-                border: none;
-                padding: 15px;
-                font-size: 13px;
-                line-height: 1.5;
-                background-color: #f8f9fa;
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
-        self.tab_widget.addTab(self.result_display, "Enhanced Prompt")
         
+        # Enhanced prompts container widget
+        self.prompts_widget = QWidget()
+        self.prompts_layout = QVBoxLayout(self.prompts_widget)
+        self.prompts_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.prompts_layout.setSpacing(8)
+        self.prompts_layout.setContentsMargins(8, 8, 8, 8)
         
-        layout.addWidget(self.tab_widget)
+        self.prompts_scroll.setWidget(self.prompts_widget)
         
-        # Action buttons for results
-        result_button_layout = QHBoxLayout()
-        
-        self.copy_button = QPushButton("📋 Copy Enhanced Prompt")
-        self.copy_button.setStyleSheet("""
-            QPushButton {
-                background-color: #9b59b6;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #8e44ad;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """)
-        self.copy_button.setEnabled(False)
-        
-        self.save_button = QPushButton("💾 Save to Notes")
-        self.save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #f39c12;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e67e22;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """)
-        self.save_button.setEnabled(False)
-        
-
-        
-        result_button_layout.addWidget(self.copy_button)
-        result_button_layout.addWidget(self.save_button)
-        layout.addLayout(result_button_layout)
-        
-        return panel
+        # Add widgets to main layout
+        layout.addWidget(input_frame)
+        layout.addWidget(self.prompts_scroll, 1)
         
     def setup_connections(self):
         """Setup signal connections"""
         self.enhance_button.clicked.connect(self.enhance_prompt)
         self.clear_button.clicked.connect(self.clear_all)
-        self.paste_button.clicked.connect(self.paste_from_clipboard)
-        self.copy_button.clicked.connect(self.copy_result)
-        self.save_button.clicked.connect(self.save_to_notes)
         
     def enhance_prompt(self):
         """Enhance the current prompt"""
@@ -346,7 +345,6 @@ class EnhancedEnhancePromptPanel(QWidget):
         self.worker.enhanced.connect(self.on_enhancement_complete)
         self.worker.error.connect(self.on_enhancement_error)
         self.worker.finished.connect(self.on_worker_finished)
-        self.worker.progress.connect(self.update_status)
         
         self.worker.start()
         
@@ -354,18 +352,19 @@ class EnhancedEnhancePromptPanel(QWidget):
         """Handle successful enhancement"""
         enhanced_prompt = result.get('enhancedPrompt', '')
         if enhanced_prompt:
-            # Display enhanced prompt
-            self.result_display.setPlainText(enhanced_prompt)
+            # Add to enhanced prompts list
+            prompt_data = {
+                'id': len(self.enhanced_prompts) + 1,
+                'enhanced_prompt': enhanced_prompt,
+                'original_prompt': self.prompt_input.toPlainText().strip()
+            }
+            self.enhanced_prompts.append(prompt_data)
             
-            # Enable action buttons
-            self.copy_button.setEnabled(True)
-            self.save_button.setEnabled(True)
+            # Update display
+            self.update_prompts_display()
             
-            # Switch to result tab
-            self.tab_widget.setCurrentIndex(0)
-            
-            # Update status
-            self.update_status("Prompt enhanced successfully!")
+            # Clear input
+            self.prompt_input.clear()
             
             # Emit signal
             self.prompt_enhanced.emit(result)
@@ -374,11 +373,6 @@ class EnhancedEnhancePromptPanel(QWidget):
             
     def on_enhancement_error(self, error_message: str):
         """Handle enhancement error"""
-        self.result_display.setPlainText("")
-        self.copy_button.setEnabled(False)
-        self.save_button.setEnabled(False)
-        self.update_status(f"Error: {error_message}")
-        
         # Show error dialog
         QMessageBox.critical(self, "Enhancement Error", f"Failed to enhance prompt:\n{error_message}")
         
@@ -397,59 +391,44 @@ class EnhancedEnhancePromptPanel(QWidget):
         self.enhance_button.setEnabled(not processing)
         self.prompt_input.setEnabled(not processing)
         self.progress_bar.setVisible(processing)
-        
-        if processing:
-            self.update_status("Enhancing prompt...")
             
-    def update_status(self, message: str):
-        """Update status message"""
-        self.status_label.setText(message)
-        if "Error" in message:
-            self.status_label.setStyleSheet("color: #e74c3c; font-size: 11px; padding: 5px; background-color: #fdf2f2; border-radius: 4px;")
-        elif "successfully" in message.lower():
-            self.status_label.setStyleSheet("color: #27ae60; font-size: 11px; padding: 5px; background-color: #f0f9f0; border-radius: 4px;")
-        else:
-            self.status_label.setStyleSheet("color: #3498db; font-size: 11px; padding: 5px; background-color: #f0f8ff; border-radius: 4px;")
-            
-    
     def clear_all(self):
         """Clear all inputs and results"""
         self.prompt_input.clear()
-        self.copy_button.setEnabled(False)
-        self.save_button.setEnabled(False)
-        self.update_status("Ready to enhance prompts")
+        self.enhanced_prompts.clear()
+        self.update_prompts_display()
         
-    def paste_from_clipboard(self):
-        """Paste text from clipboard"""
-        clipboard = self.window().clipboard()
-        text = clipboard.text()
-        if text and text.strip():
-            self.prompt_input.setPlainText(text.strip())
-            self.update_status("Text pasted from clipboard")
-        else:
-            self.update_status("No text in clipboard")
-            
-    def copy_result(self):
-        """Copy enhanced prompt to clipboard"""
-        enhanced_text = self.result_display.toPlainText()
-        if enhanced_text:
-            clipboard = self.window().clipboard()
-            clipboard.setText(enhanced_text)
-            self.update_status("Enhanced prompt copied to clipboard!")
-            
-            # Clear status after 3 seconds
-            QTimer.singleShot(3000, lambda: self.update_status("Ready to enhance prompts"))
-            
-    def save_to_notes(self):
-        """Save enhanced prompt to notes"""
-        enhanced_text = self.result_display.toPlainText()
-        if enhanced_text:
-            # This would integrate with the notes system
-            # For now, just show a message
-            QMessageBox.information(self, "Save to Notes", "This feature will integrate with the notes system.")
-            self.update_status("Save to notes feature coming soon!")
-            
+    def update_prompts_display(self):
+        """Update the enhanced prompts display with cards"""
+        # Clear existing cards
+        for card in self.prompt_cards.values():
+            self.prompts_layout.removeWidget(card)
+            card.deleteLater()
+        self.prompt_cards.clear()
         
+        # Remove any existing stretch widget
+        for i in reversed(range(self.prompts_layout.count())):
+            item = self.prompts_layout.itemAt(i)
+            if item.widget() and item.widget().sizePolicy().verticalPolicy() == QSizePolicy.Policy.Expanding:
+                self.prompts_layout.removeItem(item)
+                item.widget().deleteLater()
+        
+        # Add new cards
+        for prompt_data in self.enhanced_prompts:
+            card = EnhancedPromptCard(
+                prompt_data['enhanced_prompt'],
+                prompt_data['original_prompt'],
+                self.prompts_widget
+            )
+            self.prompt_cards[prompt_data['id']] = card
+            self.prompts_layout.addWidget(card)
+        
+        # Add stretch to push cards to top if there are prompts
+        if self.enhanced_prompts:
+            stretch = QWidget()
+            stretch.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.prompts_layout.addWidget(stretch)
+            
     def set_prompt_from_clipboard(self, text: str):
         """Set prompt from clipboard text"""
         if text and text.strip():

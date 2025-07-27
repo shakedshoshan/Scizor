@@ -53,7 +53,7 @@ class ClipboardPanel(QGroupBox):
         
         # Clipboard list
         self.clipboard_list = QListWidget()
-        self.clipboard_list.setMaximumHeight(120)
+        self.clipboard_list.setMaximumHeight(300)  # Increased height to show more items
         self.clipboard_list.setAlternatingRowColors(True)
         self.clipboard_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.clipboard_list.setStyleSheet("""
@@ -110,7 +110,7 @@ class ClipboardPanel(QGroupBox):
         
     def load_clipboard_history(self):
         """Load clipboard history from database"""
-        history = self.clipboard_manager.get_clipboard_history()
+        history = self.clipboard_manager.get_clipboard_history(limit=100)  # Get up to 100 items
         self.update_clipboard_list(history)
         
     def update_clipboard_list(self, history_items):

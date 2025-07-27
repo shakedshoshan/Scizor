@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt
 from .features.desktop import (
     HeaderPanel, ClipboardPanel, NotesPanel
 )
-from core.clipboard_manager import get_clipboard_manager
+from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 
 
@@ -85,6 +85,9 @@ class MainWindow(QMainWindow):
         # Start the hotkey manager
         start_hotkey_manager()
         
+        # Start clipboard monitoring
+        start_clipboard_monitoring()
+        
         # Connect to hotkey manager signals
         hotkey_manager = get_hotkey_manager()
         hotkey_manager.toggle_requested.connect(self.toggle_visibility)
@@ -157,6 +160,9 @@ class MainWindow(QMainWindow):
         try:
             # Stop hotkey manager
             stop_hotkey_manager()
+            
+            # Stop clipboard monitoring
+            stop_clipboard_monitoring()
             
             # Close clipboard manager
             from core.clipboard_manager import close_clipboard_manager

@@ -7,8 +7,11 @@ Handles global hotkeys for dashboard control
 import keyboard
 import threading
 import pyperclip
+import time
 from typing import Callable, Optional, Dict
 from PyQt6.QtCore import QObject, pyqtSignal
+
+from core.clipboard_manager import get_clipboard_manager
 
 
 class HotkeyManager(QObject):
@@ -23,6 +26,7 @@ class HotkeyManager(QObject):
         super().__init__()
         self.is_running = False
         self._hotkey_thread: Optional[threading.Thread] = None
+        self.clipboard_manager = get_clipboard_manager()
         
     def start(self):
         """Start listening for hotkeys"""
@@ -78,7 +82,6 @@ class HotkeyManager(QObject):
             keyboard.send('ctrl+c')
             
             # Small delay to ensure copy operation completes
-            import time
             time.sleep(0.1)
             
             # Get the selected text from clipboard
@@ -89,6 +92,13 @@ class HotkeyManager(QObject):
                 pyperclip.copy(original_clipboard)
             
             if selected_text and selected_text != original_clipboard:
+                # Save the copied text to clipboard history using thread-safe method
+                try:
+                    self.clipboard_manager.add_to_history(selected_text)
+                except Exception as e:
+                    print(f"Failed to add to clipboard history: {e}")
+                
+                # Emit signal for note creation
                 self.create_note_requested.emit(selected_text)
             else:
                 print("No text selected. Please select text first, then press Ctrl+Alt+N.")

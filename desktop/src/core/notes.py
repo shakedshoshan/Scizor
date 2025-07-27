@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
 from PyQt6.QtCore import QObject, pyqtSignal
-from database import get_database
+from database.db_connection import get_database
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,7 +27,6 @@ class NoteManager(QObject):
     def __init__(self):
         """Initialize the notes manager"""
         super().__init__()
-        self.db = get_database()
     
     def create_note(self, title: str, content: str, priority: int = 1) -> int:
         """Add a new note to the database"""
@@ -39,9 +38,10 @@ class NoteManager(QObject):
         params = (title, content, priority, current_time, current_time)
         
         try:
-            cursor = self.db.get_connection().cursor()
+            db = get_database()
+            cursor = db.get_connection().cursor()
             cursor.execute(query, params)
-            self.db.get_connection().commit()
+            db.get_connection().commit()
             note_id = cursor.lastrowid
             logger.info(f"Note added successfully with ID: {note_id}")
             
@@ -58,7 +58,7 @@ class NoteManager(QObject):
             return note_id
         except Exception as e:
             logger.error(f"Failed to add note: {e}")
-            self.db.get_connection().rollback()
+            db.get_connection().rollback()
             self.error_occurred.emit(f"Failed to add note: {e}")
             raise
     
@@ -86,8 +86,13 @@ class NoteManager(QObject):
     def get_note(self, note_id: int) -> Optional[Dict[str, Any]]:
         """Get a note by ID"""
         query = "SELECT * FROM notes WHERE id = ?"
-        results = self.db.execute_query(query, (note_id,))
-        return results[0] if results else None
+        try:
+            db = get_database()
+            results = db.execute_query(query, (note_id,))
+            return results[0] if results else None
+        except Exception as e:
+            logger.error(f"Failed to get note {note_id}: {e}")
+            return None
     
     def get_notes(self) -> List[Dict[str, Any]]:
         """Get all notes ordered by priority and creation date"""
@@ -96,7 +101,8 @@ class NoteManager(QObject):
         ORDER BY priority DESC, created_at DESC
         """
         try:
-            results = self.db.execute_query(query)
+            db = get_database()
+            results = db.execute_query(query)
             self.notes_loaded.emit(results)
             return results
         except Exception as e:
@@ -136,7 +142,8 @@ class NoteManager(QObject):
         """
         
         try:
-            self.db.execute_query(query, tuple(params))
+            db = get_database()
+            db.execute_query(query, tuple(params))
             logger.info(f"Note {note_id} updated successfully")
             
             # Emit signal with updated note data
@@ -154,7 +161,8 @@ class NoteManager(QObject):
         query = "DELETE FROM notes WHERE id = ?"
         
         try:
-            self.db.execute_query(query, (note_id,))
+            db = get_database()
+            db.execute_query(query, (note_id,))
             logger.info(f"Note {note_id} deleted successfully")
             self.note_deleted.emit(note_id)
             return True
@@ -172,7 +180,8 @@ class NoteManager(QObject):
         """
         search_pattern = f"%{search_term}%"
         try:
-            results = self.db.execute_query(query, (search_pattern, search_pattern))
+            db = get_database()
+            results = db.execute_query(query, (search_pattern, search_pattern))
             self.notes_loaded.emit(results)
             return results
         except Exception as e:
@@ -202,7 +211,8 @@ class NoteManager(QObject):
         query = sort_queries.get(sort_by, sort_queries['time_created'])
         
         try:
-            results = self.db.execute_query(query)
+            db = get_database()
+            results = db.execute_query(query)
             self.notes_loaded.emit(results)
             return results
         except Exception as e:

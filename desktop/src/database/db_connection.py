@@ -6,6 +6,7 @@ Handles SQLite database setup and connection for Scizor notes
 
 import os
 import sqlite3
+import threading
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
@@ -21,7 +22,6 @@ class DatabaseConnection:
     def __init__(self):
         """Initialize database connection"""
         self.db_path = self._get_database_path()
-        self.connection: Optional[sqlite3.Connection] = None
         self._ensure_database_directory()
         self._initialize_database()
     
@@ -49,19 +49,19 @@ class DatabaseConnection:
     def _initialize_database(self):
         """Initialize the database and create tables if they don't exist"""
         try:
-            self.connection = sqlite3.connect(self.db_path)
-            self.connection.row_factory = sqlite3.Row  # Enable row factory for dict-like access
+            # Get thread-local connection
+            connection = self.get_connection()
             
             # Create tables
-            self._create_notes_table()
-            self._create_clipboard_history_table()
+            self._create_notes_table(connection)
+            self._create_clipboard_history_table(connection)
             logger.info(f"Database initialized successfully: {self.db_path}")
             
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
     
-    def _create_notes_table(self):
+    def _create_notes_table(self, connection: sqlite3.Connection):
         """Create the notes table if it doesn't exist"""
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS notes (
@@ -75,15 +75,15 @@ class DatabaseConnection:
         """
         
         try:
-            cursor = self.connection.cursor()
+            cursor = connection.cursor()
             cursor.execute(create_table_sql)
-            self.connection.commit()
+            connection.commit()
             logger.info("Notes table created/verified successfully")
         except Exception as e:
             logger.error(f"Failed to create notes table: {e}")
             raise
     
-    def _create_clipboard_history_table(self):
+    def _create_clipboard_history_table(self, connection: sqlite3.Connection):
         """Create the clipboard_history table if it doesn't exist"""
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS clipboard_history (
@@ -95,31 +95,39 @@ class DatabaseConnection:
         """
         
         try:
-            cursor = self.connection.cursor()
+            cursor = connection.cursor()
             cursor.execute(create_table_sql)
-            self.connection.commit()
+            connection.commit()
             logger.info("Clipboard history table created/verified successfully")
         except Exception as e:
             logger.error(f"Failed to create clipboard_history table: {e}")
             raise
     
     def get_connection(self) -> sqlite3.Connection:
-        """Get the database connection"""
-        if not self.connection:
-            self._initialize_database()
-        return self.connection
+        """Get a thread-local database connection"""
+        # Use thread-local storage for database connections
+        if not hasattr(self, '_thread_local'):
+            self._thread_local = threading.local()
+        
+        if not hasattr(self._thread_local, 'connection') or self._thread_local.connection is None:
+            self._thread_local.connection = sqlite3.connect(self.db_path)
+            self._thread_local.connection.row_factory = sqlite3.Row  # Enable row factory for dict-like access
+            
+        return self._thread_local.connection
     
     def close_connection(self):
-        """Close the database connection"""
-        if self.connection:
-            self.connection.close()
-            self.connection = None
-            logger.info("Database connection closed")
+        """Close the thread-local database connection"""
+        if hasattr(self, '_thread_local') and hasattr(self._thread_local, 'connection'):
+            if self._thread_local.connection:
+                self._thread_local.connection.close()
+                self._thread_local.connection = None
+                logger.info("Database connection closed")
     
     def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Execute a query and return results as a list of dictionaries"""
+        connection = self.get_connection()
         try:
-            cursor = self.get_connection().cursor()
+            cursor = connection.cursor()
             cursor.execute(query, params)
             
             if query.strip().upper().startswith('SELECT'):
@@ -131,12 +139,12 @@ class DatabaseConnection:
                 return results
             else:
                 # Commit for INSERT, UPDATE, DELETE queries
-                self.connection.commit()
+                connection.commit()
                 return []
                 
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
-            self.connection.rollback()
+            connection.rollback()
             raise
 
     

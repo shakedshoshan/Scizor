@@ -19,7 +19,7 @@ from core import get_notes_manager
 
 
 class EnhancedNoteCard(QFrame):
-    """Enhanced individual note card widget with better styling"""
+    """Enhanced individual note card widget with styling similar to original"""
     
     def __init__(self, note_data, notes_panel, parent=None):
         super().__init__(parent)
@@ -29,160 +29,200 @@ class EnhancedNoteCard(QFrame):
         self.setup_connections()
         
     def setup_ui(self):
-        """Setup the enhanced note card UI"""
+        """Setup the note card UI similar to original"""
         self.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setMinimumHeight(140)
-        self.setMaximumHeight(200)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.setMinimumHeight(100)
         
-        # Enhanced card styling
+        # Card styling to match the original
         self.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #f8f9fa);
-                border: 2px solid #e9ecef;
-                border-radius: 10px;
-                margin: 6px;
-            }
-            QFrame:hover {
-                border-color: #3498db;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #e3f2fd);
+                background-color: white;
+                border: none;
+                border-radius: 8px;
+                margin: 4px;
             }
         """)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
         
-        # Header with title, priority, and actions
+        # Header with title and priority
         header_layout = QHBoxLayout()
         
-        # Title with better truncation
+        # Title (truncated)
         title = self.note_data.get('title') or 'Untitled'
-        if len(title) > 40:
-            title = title[:37] + "..."
+        if len(title) > 35:
+            title = title[:32] + "..."
         
         title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         title_label.setStyleSheet("color: #2c3e50;")
         title_label.setWordWrap(True)
         
-        # Priority badge with enhanced styling
+        # Priority tag (orange badge as shown in original)
         priority = self.note_data.get('priority', 1)
         priority_label = QLabel(str(priority))
-        priority_label.setFixedSize(24, 24)
+        priority_label.setFixedSize(20, 20)
         priority_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         priority_label.setStyleSheet(f"""
             background-color: {self.get_priority_color(priority)};
             color: white;
-            border-radius: 12px;
+            border-radius: 10px;
             font-weight: bold;
-            font-size: 11px;
-            border: 2px solid {self.get_priority_border_color(priority)};
+            font-size: 10px;
         """)
-        
-        # Action buttons
-        edit_btn = QPushButton("✏️")
-        edit_btn.setFixedSize(24, 24)
-        edit_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
-        edit_btn.clicked.connect(lambda: self.notes_panel.edit_note(self.note_data.get('id')))
-        
-        delete_btn = QPushButton("🗑️")
-        delete_btn.setFixedSize(24, 24)
-        delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #c0392b;
-            }
-        """)
-        delete_btn.clicked.connect(lambda: self.notes_panel.delete_note(self.note_data.get('id')))
         
         header_layout.addWidget(title_label, 1)
         header_layout.addWidget(priority_label)
-        header_layout.addWidget(edit_btn)
-        header_layout.addWidget(delete_btn)
         
-        # Content preview with better formatting
+        # Full content (not truncated) - show all content
         content = self.note_data.get('content', '')
-        # Show first 2 lines or 100 characters
-        lines = content.split('\n')
-        preview_content = '\n'.join(lines[:2]) if len(lines) > 1 else content[:100]
-        if len(content) > 100:
-            preview_content += "..."
-        
-        content_label = QLabel(preview_content)
+        content_label = QLabel(content)
         content_label.setWordWrap(True)
+        content_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         content_label.setStyleSheet("""
             color: #34495e;
             font-size: 11px;
             line-height: 1.4;
             padding: 4px 0;
-            background-color: transparent;
         """)
         
-        # Enhanced metadata
+        # Metadata with both creation and update dates
         created_at = self.note_data.get('created_at', '')
         updated_at = self.note_data.get('updated_at', '')
         
-        metadata_text = f"📅 Created: {created_at[:10] if created_at else 'Unknown'}"
+        metadata_text = f"Created: {created_at[:10] if created_at else 'Unknown'}"
         if updated_at and updated_at != created_at:
-            metadata_text += f" | ✏️ Updated: {updated_at[:10]}"
+            metadata_text += f" | Updated: {updated_at[:10]}"
         
         metadata_label = QLabel(metadata_text)
         metadata_label.setStyleSheet("""
             color: #7f8c8d;
-            font-size: 9px;
+            font-size: 10px;
             font-style: italic;
         """)
         
-        # Add widgets to layout
+        # Action buttons (left side: Edit, Del, right side: Copy)
+        actions_layout = QHBoxLayout()
+        
+        # Left side buttons
+        left_buttons_layout = QHBoxLayout()
+        
+        edit_btn = QPushButton("Edit")
+        edit_btn.setFixedSize(50, 25)
+        edit_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        
+        delete_btn = QPushButton("Del")
+        delete_btn.setFixedSize(40, 25)
+        delete_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+        """)
+        
+        left_buttons_layout.addWidget(edit_btn)
+        left_buttons_layout.addWidget(delete_btn)
+        left_buttons_layout.addStretch()
+        
+        # Right side button
+        copy_btn = QPushButton("Copy")
+        copy_btn.setFixedSize(50, 25)
+        copy_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+        """)
+        
+        actions_layout.addLayout(left_buttons_layout)
+        actions_layout.addWidget(copy_btn)
+        
+        # Store button references
+        self.edit_btn = edit_btn
+        self.delete_btn = delete_btn
+        self.copy_btn = copy_btn
+        
+        # Add all widgets to layout
         layout.addLayout(header_layout)
         layout.addWidget(content_label, 1)
         layout.addWidget(metadata_label)
+        layout.addLayout(actions_layout)
+        
+        # Calculate and set optimal height based on content
+        self.adjust_height_to_content()
         
     def setup_connections(self):
-        """Setup signal connections"""
-        self.mouseDoubleClickEvent = lambda event: self.notes_panel.edit_note(self.note_data.get('id'))
+        """Setup button connections"""
+        self.edit_btn.clicked.connect(lambda: self.notes_panel.edit_note(self.note_data['id']))
+        self.delete_btn.clicked.connect(lambda: self.notes_panel.delete_note(self.note_data['id']))
+        self.copy_btn.clicked.connect(lambda: self.notes_panel.copy_note_content(self.note_data))
         
     def get_priority_color(self, priority):
-        """Get color for priority level"""
+        """Get color for priority tag - orange for priority 2 as shown in original"""
         colors = {
             1: "#95a5a6",  # Gray
-            2: "#3498db",  # Blue
-            3: "#f39c12",  # Orange
-            4: "#e74c3c",  # Red
-            5: "#9b59b6"   # Purple
+            2: "#f39c12",  # Orange (as shown in original)
+            3: "#f1c40f",  # Yellow
+            4: "#e67e22",  # Dark Orange
+            5: "#e74c3c"   # Red
         }
         return colors.get(priority, "#95a5a6")
         
-    def get_priority_border_color(self, priority):
-        """Get border color for priority level"""
-        colors = {
-            1: "#7f8c8d",
-            2: "#2980b9",
-            3: "#e67e22",
-            4: "#c0392b",
-            5: "#8e44ad"
-        }
-        return colors.get(priority, "#7f8c8d")
+    def adjust_height_to_content(self):
+        """Adjust the card height based on content length"""
+        content = self.note_data.get('content', '')
+        if not content:
+            return
+            
+        # Calculate approximate lines needed
+        lines = content.split('\n')
+        estimated_lines = len(lines)
+        
+        # For long lines, estimate additional lines needed
+        for line in lines:
+            if len(line) > 80:  # Assuming ~80 characters per line
+                estimated_lines += len(line) // 80
+                
+        # Calculate height: base height + content height
+        base_height = 80  # Header + metadata + buttons
+        line_height = 16  # Approximate line height
+        content_height = estimated_lines * line_height
+        
+        # Set minimum and maximum heights
+        min_height = 100
+        max_height = 400
+        optimal_height = min(max_height, max(min_height, base_height + content_height))
+        
+        self.setMinimumHeight(int(optimal_height))
 
 
 class EnhancedNoteDialog(QDialog):
@@ -352,6 +392,7 @@ class EnhancedNotesPanel(QGroupBox):
         super().__init__("📝 Enhanced Notes", parent)
         self.notes_manager = get_notes_manager()
         self.current_notes = []
+        self.note_cards = {}
         self.search_timer = QTimer()
         self.search_timer.setSingleShot(True)
         self.search_timer.setInterval(300)
@@ -496,22 +537,40 @@ class EnhancedNotesPanel(QGroupBox):
         controls_layout.addLayout(top_row)
         controls_layout.addLayout(bottom_row)
         
-        # Notes display area
+        # Notes scroll area
         self.notes_scroll = QScrollArea()
         self.notes_scroll.setWidgetResizable(True)
+        self.notes_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.notes_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.notes_scroll.setStyleSheet("""
             QScrollArea {
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                background-color: white;
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                background-color: #f1f1f1;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #c1c1c1;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a8a8a8;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
         
+        # Notes container widget
         self.notes_widget = QWidget()
         self.notes_layout = QVBoxLayout(self.notes_widget)
-        self.notes_layout.setContentsMargins(10, 10, 10, 10)
+        self.notes_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.notes_layout.setSpacing(8)
-        self.notes_layout.addStretch()
+        self.notes_layout.setContentsMargins(8, 8, 8, 8)
         
         self.notes_scroll.setWidget(self.notes_widget)
         
@@ -629,6 +688,15 @@ class EnhancedNotesPanel(QGroupBox):
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to import notes: {e}")
                 
+    def copy_note_content(self, note_data):
+        """Copy note content to clipboard"""
+        from PyQt6.QtWidgets import QApplication
+        content = note_data.get('content', '')
+        QApplication.clipboard().setText(content)
+        
+        # Show brief feedback
+        QMessageBox.information(self, "Copied", "Note content copied to clipboard!")
+                
     def on_search_changed(self):
         """Handle search input changes"""
         self.search_timer.start()
@@ -681,17 +749,31 @@ class EnhancedNotesPanel(QGroupBox):
         self.error_occurred.emit(error_message)
         
     def update_notes_display(self):
-        """Update the notes display"""
-        # Clear existing note cards
-        for i in reversed(range(self.notes_layout.count() - 1)):  # Keep the stretch
-            child = self.notes_layout.itemAt(i).widget()
-            if child:
-                child.deleteLater()
-                
-        # Add note cards
+        """Update the notes display with cards"""
+        # Clear existing cards
+        for card in self.note_cards.values():
+            self.notes_layout.removeWidget(card)
+            card.deleteLater()
+        self.note_cards.clear()
+        
+        # Remove any existing stretch widget
+        for i in reversed(range(self.notes_layout.count())):
+            item = self.notes_layout.itemAt(i)
+            if item.widget() and item.widget().sizePolicy().verticalPolicy() == QSizePolicy.Policy.Expanding:
+                self.notes_layout.removeItem(item)
+                item.widget().deleteLater()
+        
+        # Add new cards
         for note in self.current_notes:
-            note_card = EnhancedNoteCard(note, self)
-            self.notes_layout.insertWidget(self.notes_layout.count() - 1, note_card)
+            card = EnhancedNoteCard(note, self, self.notes_widget)
+            self.note_cards[note['id']] = card
+            self.notes_layout.addWidget(card)
+        
+        # Add stretch to push cards to top if there are notes
+        if self.current_notes:
+            stretch = QWidget()
+            stretch.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.notes_layout.addWidget(stretch)
             
     def get_selected_note(self):
         """Get the currently selected note"""

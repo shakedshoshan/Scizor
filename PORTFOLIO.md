@@ -185,16 +185,23 @@ n
 - **Transparency:** Public donation records and impact reporting
 - **Mobile Support:** Responsive design for mobile donations
 
-### 14. **Social Media Sports Predictions** - Predictive Analytics Platform
-**Tech Stack:** JavaScript, Social Media APIs, Data Analysis, Machine Learning  
-**Description:** A platform that combines social media data with sports analytics to provide predictive insights.
+### 14. **Social Media Sports Predictions** - Sports Prediction Social Platform
+**Tech Stack:** React, Vite, Tailwind CSS, Node.js, Express, PostgreSQL, Zustand, Redis, Cheerio, JWT Authentication  
+**Description:** A comprehensive social media platform focused on sports predictions, allowing users to make predictions, join groups, and interact through posts, comments, and chat while showing pre-game information through web scraping.
 
 **Key Features:**
-- **Social Media Integration:** Real-time data collection from multiple platforms
-- **Predictive Analytics:** Machine learning models for outcome prediction
-- **Data Visualization:** Interactive charts and statistical displays
-- **User Engagement:** Community features and prediction sharing
-- **Real-time Updates:** Live data feeds and prediction adjustments
+- **User Authentication:** Secure JWT-based authentication system with user registration and login
+- **Post Creation & Management:** Create, edit, and delete prediction posts with rich text formatting
+- **Group Management:** Create and join groups using secret codes for private communities
+- **Event Predictions:** Make predictions on upcoming sports events with detailed analysis
+- **Real-time Chat:** Interactive chat system for group discussions and predictions
+- **User Profiles:** Comprehensive profiles with followers/following system and activity history
+- **Responsive Design:** Mobile-first approach with adaptive layouts for all devices
+- **Web Scraping:** Automated sports event data collection using Cheerio for pre-game information
+- **Caching System:** Redis-based caching for improved performance and data persistence
+- **State Management:** Zustand for efficient client-side state management
+- **RESTful API:** Comprehensive backend API with proper error handling and validation
+- **Database Design:** PostgreSQL with optimized schema for user data, posts, and predictions
 
 ### 15. **S3 Static Website** - Cloud Infrastructure Project
 **Tech Stack:** AWS S3, HTML, CSS, JavaScript, Cloud Architecture  

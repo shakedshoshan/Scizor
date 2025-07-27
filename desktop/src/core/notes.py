@@ -62,6 +62,27 @@ class NoteManager(QObject):
             self.error_occurred.emit(f"Failed to add note: {e}")
             raise
     
+    def create_note_from_text(self, selected_text: str, priority: int = 1) -> int:
+        """Create a note from selected text with automatic title generation"""
+        if not selected_text or not selected_text.strip():
+            raise ValueError("Selected text cannot be empty")
+        
+        # Generate title from first line or first 50 characters
+        lines = selected_text.strip().split('\n')
+        first_line = lines[0].strip()
+        
+        if len(first_line) > 50:
+            title = first_line[:47] + "..."
+        else:
+            title = first_line if first_line else "Quick Note"
+        
+        # If title is empty or too short, use a default
+        if not title or len(title) < 3:
+            title = f"Note from {datetime.now().strftime('%H:%M')}"
+        
+        # Create the note
+        return self.create_note(title, selected_text.strip(), priority)
+    
     def get_note(self, note_id: int) -> Optional[Dict[str, Any]]:
         """Get a note by ID"""
         query = "SELECT * FROM notes WHERE id = ?"

@@ -12,6 +12,7 @@ from .features.desktop import (
     HeaderPanel, ClipboardPanel, NotesPanel
 )
 from core.clipboard_manager import get_clipboard_manager
+from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 
 
 class MainWindow(QMainWindow):
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.setup_layout()
         self.setup_connections()
+        self.setup_hotkeys()
         
     def init_ui(self):
         """Initialize the UI components"""
@@ -78,7 +80,36 @@ class MainWindow(QMainWindow):
         self.notes_panel.notes_loaded.connect(self.on_notes_loaded)
         self.notes_panel.error_occurred.connect(self.on_notes_error)
         
+    def setup_hotkeys(self):
+        """Setup global hotkeys for dashboard control"""
+        # Start the hotkey manager
+        start_hotkey_manager()
         
+        # Connect to hotkey manager signals
+        hotkey_manager = get_hotkey_manager()
+        hotkey_manager.toggle_requested.connect(self.toggle_visibility)
+        hotkey_manager.create_note_requested.connect(self.create_note_from_text)
+        
+    def toggle_visibility(self):
+        """Toggle dashboard visibility with Ctrl+Alt+S"""
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show()
+            # Bring to front and focus
+            self.raise_()
+            self.activateWindow()
+    
+    def create_note_from_text(self, selected_text: str):
+        """Create note from selected text with Ctrl+Alt+N"""
+        # Show the dashboard if it's hidden
+        if not self.isVisible():
+            self.show()
+            self.raise_()
+            self.activateWindow()
+        
+        # Create the note using the notes panel
+        self.notes_panel.create_note_from_text(selected_text)
         
     def position_on_right_side(self):
         """Position the window on the right side of the screen"""
@@ -124,10 +155,14 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """Handle application close event"""
         try:
+            # Stop hotkey manager
+            stop_hotkey_manager()
+            
+            # Close clipboard manager
             from core.clipboard_manager import close_clipboard_manager
             close_clipboard_manager()
         except Exception as e:
-            print(f"Error closing clipboard manager: {e}")
+            print(f"Error during cleanup: {e}")
         
         event.accept()
         

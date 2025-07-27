@@ -474,6 +474,27 @@ class NotesPanel(QGroupBox):
             else:
                 QMessageBox.warning(self, "Error", "Note content cannot be empty!")
     
+    def create_note_from_text(self, selected_text: str):
+        """Create a note from selected text (called by hotkey)"""
+        try:
+            if not selected_text or not selected_text.strip():
+                # Don't show warning dialog for hotkey-triggered creation
+                print("No text selected for note creation")
+                return
+            
+            # Create note from selected text
+            note_id = self.notes_manager.create_note_from_text(selected_text)
+            
+            # Show success message (but don't block the UI)
+            print(f"Note created successfully from selected text! Note ID: {note_id}")
+            
+            # Refresh notes display
+            self.load_notes()
+            
+        except Exception as e:
+            print(f"Failed to create note from text: {str(e)}")
+            # Don't show error dialog for hotkey-triggered creation to avoid blocking
+    
     def edit_note(self, note_id):
         """Edit a note by ID"""
         # Find the note

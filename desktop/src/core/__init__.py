@@ -5,6 +5,7 @@ Core business logic modules for Scizor
 """
 
 from .notes import NoteManager
+from .hotkey_manager import HotkeyManager, get_hotkey_manager, start_hotkey_manager, stop_hotkey_manager
 
 # Global notes manager instance
 _notes_manager_instance = None
@@ -19,4 +20,8 @@ def get_notes_manager() -> NoteManager:
 __all__ = [
     'NoteManager',
     'get_notes_manager',
+    'HotkeyManager',
+    'get_hotkey_manager',
+    'start_hotkey_manager',
+    'stop_hotkey_manager',
 ] 

@@ -12,7 +12,7 @@ class HeaderPanel(QFrame):
     """Header panel with title and close button"""
     
     # Signals
-    close_requested = pyqtSignal()
+    close_requested = pyqtSignal() 
     
     def __init__(self, parent=None):
         """Initialize the header panel"""

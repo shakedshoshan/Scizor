@@ -99,6 +99,7 @@ class MainWindow(QMainWindow):
         hotkey_manager = get_hotkey_manager()
         hotkey_manager.toggle_requested.connect(self.toggle_visibility)
         hotkey_manager.create_note_requested.connect(self.create_note_from_text)
+        # Note: enhance_prompt_requested is handled directly in hotkey_manager for direct text replacement
         
     def toggle_visibility(self):
         """Toggle dashboard visibility with Ctrl+Alt+S"""

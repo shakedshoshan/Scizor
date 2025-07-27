@@ -9,7 +9,7 @@ import os
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from core.enhance_prompt import EnhancePromptService, EnhancementType
+from core.enhance_prompt import EnhancePromptService
 
 def test_enhance_prompt():
     """Test the enhance prompt functionality"""
@@ -33,10 +33,7 @@ def test_enhance_prompt():
     
     try:
         result = service.enhance_prompt(
-            prompt=test_prompt,
-            enhancement_type=EnhancementType.CODE,
-            context="For educational purposes",
-            target_audience="Python beginners"
+            prompt=test_prompt
         )
         
         print("✅ Enhancement successful!")

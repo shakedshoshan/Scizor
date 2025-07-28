@@ -15,6 +15,7 @@ from PyQt6.QtGui import QCursor
 
 from core.clipboard_manager import get_clipboard_manager
 from ui.component.spinner import WaitingSpinner
+from ui.component.popup_window import show_popup
 
 
 class EnhancePromptWorker(QThread):
@@ -140,6 +141,7 @@ class HotkeyManager(QObject):
     show_spinner_requested = pyqtSignal(str)  # Signal to show spinner
     hide_spinner_requested = pyqtSignal()  # Signal to hide spinner
     update_spinner_text_requested = pyqtSignal(str)  # Signal to update spinner text
+    show_popup_requested = pyqtSignal(str, str)  # Signal to show popup (title, message)
     
     def __init__(self):
         """Initialize the hotkey manager"""
@@ -153,6 +155,7 @@ class HotkeyManager(QObject):
         self.show_spinner_requested.connect(self._show_spinner_main_thread)
         self.hide_spinner_requested.connect(self._hide_spinner_main_thread)
         self.update_spinner_text_requested.connect(self._update_spinner_text_main_thread)
+        self.show_popup_requested.connect(self._show_popup_main_thread)
         
     def start(self):
         """Start listening for hotkeys"""
@@ -399,22 +402,14 @@ class HotkeyManager(QObject):
             generated_response = result.get('response', '')
             
             if generated_response:
-                # Show success message
-                self.update_spinner_text_requested.emit("Done! Pasting...")
+                # Hide spinner first
+                self.hide_spinner_requested.emit()
                 
-                # Copy generated response to clipboard
-                pyperclip.copy(generated_response)
+                # Show popup with the generated response using signal for thread safety
+                self.show_popup_requested.emit("AI Response Generated", generated_response)
+                print("Popup signal emitted")
                 
-                # Small delay to ensure clipboard is updated
-                time.sleep(0.2)
-                
-                # Automatically paste the generated response
-                keyboard.send('ctrl+v')
-                
-                # Hide spinner after a short delay
-                QTimer.singleShot(1000, lambda: self.hide_spinner_requested.emit())
-                
-                print("Response generated and pasted successfully!")
+                print("Response generated and displayed in popup!")
             else:
                 self.update_spinner_text_requested.emit("No result received")
                 QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
@@ -428,8 +423,11 @@ class HotkeyManager(QObject):
         """Handle response generation error"""
         try:
             print(f"Response generation error: {error_msg}")
-            self.update_spinner_text_requested.emit("Error occurred")
-            QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
+            self.hide_spinner_requested.emit()
+            
+            # Show error popup using signal for thread safety
+            self.show_popup_requested.emit("AI Response Error", f"Failed to generate AI response.\n\nError: {error_msg}")
+            print("Error popup signal emitted")
         except Exception as e:
             print(f"Error handling response generation error: {e}")
             self.hide_spinner_requested.emit()
@@ -448,6 +446,23 @@ class HotkeyManager(QObject):
     def _update_spinner_text_main_thread(self, text: str):
         """Update spinner text in main thread"""
         self.floating_spinner.update_text(text)
+    
+    @pyqtSlot(str, str)
+    def _show_popup_main_thread(self, title: str, message: str):
+        """Show popup in main thread"""
+        try:
+            print(f"Main thread: About to show popup: {title}")
+            popup = show_popup(title=title, message=message)
+            if popup:
+                print(f"Popup created and shown successfully: {title}")
+            else:
+                print(f"Failed to create popup: {title}")
+        except Exception as e:
+            print(f"Error showing popup in main thread: {e}")
+            # Fallback: copy to clipboard if it's a response
+            if "Response Generated" in title:
+                pyperclip.copy(message)
+                print("Response copied to clipboard as fallback")
             
     def _enhance_and_replace_text(self, text: str):
         """Legacy method - kept for compatibility"""

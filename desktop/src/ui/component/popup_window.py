@@ -5,15 +5,15 @@ Provides a small popup window with title, message, copy button, and exit functio
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QTextEdit, QFrame
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QPushButton, QTextEdit, QFrame, QApplication
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QPalette, QColor
+from PyQt6.QtGui import QFont
 import pyperclip
 
 
-class PopupWindow(QWidget):
+class PopupWindow(QDialog):
     """Small popup window with title, message, copy button, and exit functionality"""
     
     # Signal emitted when the popup is closed
@@ -31,18 +31,26 @@ class PopupWindow(QWidget):
         super().__init__(parent)
         self.title = title
         self.message = message
+        print(f"Creating popup window: {title}")
         self.init_ui()
         self.setup_styling()
+        print(f"Popup window created successfully: {title}")
         
     def init_ui(self):
         """Initialize the UI components"""
         # Set window properties
         self.setWindowTitle(self.title)
         self.setFixedSize(400, 300)
+        
+        # Set window flags for proper display
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint |  # Keep on top
-            Qt.WindowType.FramelessWindowHint     # No window frame
+            Qt.WindowType.FramelessWindowHint |   # No window frame
+            Qt.WindowType.Dialog                   # Dialog window
         )
+        
+        # Position the window in the center of the screen
+        self.center_window()
         
         # Create main layout
         self.main_layout = QVBoxLayout(self)
@@ -194,7 +202,7 @@ class PopupWindow(QWidget):
     def setup_styling(self):
         """Setup the overall styling of the popup window"""
         self.setStyleSheet("""
-            QWidget {
+            QDialog {
                 background-color: white;
                 border: 1px solid #bdc3c7;
                 border-radius: 8px;
@@ -250,7 +258,7 @@ class PopupWindow(QWidget):
     def close_popup(self):
         """Close the popup window"""
         self.closed.emit()
-        self.close()
+        self.accept()  # Use accept() for QDialog
         
     def set_message(self, message):
         """Update the message content"""
@@ -274,6 +282,24 @@ class PopupWindow(QWidget):
         if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
+    
+    def center_window(self):
+        """Center the window on the screen"""
+        try:
+            app = QApplication.instance()
+            if app:
+                screen = app.primaryScreen()
+                if screen:
+                    screen_geometry = screen.geometry()
+                    x = (screen_geometry.width() - self.width()) // 2
+                    y = (screen_geometry.height() - self.height()) // 2
+                    self.move(x, y)
+                    print(f"Window positioned at: ({x}, {y})")
+        except Exception as e:
+            print(f"Error centering window: {e}")
+            # Fallback: move to a reasonable position
+            self.move(100, 100)
+            print("Using fallback position: (100, 100)")
 
 
 def show_popup(title="Popup", message="", parent=None):
@@ -288,8 +314,18 @@ def show_popup(title="Popup", message="", parent=None):
     Returns:
         PopupWindow: The created popup window instance
     """
+    # Check if QApplication exists
+    app = QApplication.instance()
+    if not app:
+        print("Error: No QApplication instance found. Cannot show popup.")
+        return None
+    
+    print(f"Creating popup with title: {title}")
     popup = PopupWindow(title, message, parent)
-    popup.show()
+    
+    # Show the popup as modal
+    result = popup.exec()
+    print(f"Popup closed with result: {result}")
     return popup
 
 

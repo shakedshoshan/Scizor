@@ -84,6 +84,7 @@ class HeaderPanel(QFrame):
         # Close button
         self.close_btn = QPushButton("×")
         self.close_btn.setFixedSize(25, 25)
+        self.close_btn.setToolTip("Hide Dashboard")
         self.close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
@@ -108,7 +109,12 @@ class HeaderPanel(QFrame):
         """Setup signal connections"""
         self.settings_btn.clicked.connect(self.settings_requested.emit)
         self.expand_btn.clicked.connect(self.expand_requested.emit)
-        self.close_btn.clicked.connect(self.close_requested.emit)
+        self.close_btn.clicked.connect(self.hide_window)
+        
+    def hide_window(self):
+        """Hide the window using the same action as ctrl+alt+s hotkey"""
+        # Emit the close_requested signal which should trigger the same action as the hotkey
+        self.close_requested.emit()
         
     def set_title(self, title):
         """Set the header title"""

@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
     def setup_connections(self):
         """Setup signal connections between feature components"""
         # Header connections
-        self.header.close_requested.connect(self.close)
+        self.header.close_requested.connect(self.toggle_visibility)
         self.header.expand_requested.connect(self.open_expanded_window)
         self.header.settings_requested.connect(self.open_settings)
         

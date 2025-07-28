@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from database.db_connection import get_database
+import sys
 
 
 class FeatureListItem(QWidget):
@@ -111,7 +112,7 @@ class SettingsWindow(QDialog):
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
         
-        # Header with gear icon
+        # Header with gear icon and shutdown button
         header_layout = QHBoxLayout()
         gear_label = QLabel("⚙️")
         gear_label.setFont(QFont("Arial", 16))
@@ -121,6 +122,28 @@ class SettingsWindow(QDialog):
         title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         header_layout.addWidget(title_label)
         header_layout.addStretch()
+        
+        # Small shutdown button in top-right corner
+        self.shutdown_btn = QPushButton("⏻")
+        self.shutdown_btn.setToolTip("Shutdown Application")
+        self.shutdown_btn.setFixedSize(32, 32)
+        self.shutdown_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 16px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+        """)
+        header_layout.addWidget(self.shutdown_btn)
         
         layout.addLayout(header_layout)
         
@@ -251,6 +274,7 @@ class SettingsWindow(QDialog):
         self.move_up_btn.clicked.connect(self.move_feature_up)
         self.move_down_btn.clicked.connect(self.move_feature_down)
         self.features_list.itemSelectionChanged.connect(self.update_button_states)
+        self.shutdown_btn.clicked.connect(self.shutdown_application)
         
         # Connect layout setting changes
         self.columns_combo.currentTextChanged.connect(self.update_layout_info)
@@ -511,3 +535,26 @@ class SettingsWindow(QDialog):
                 list_item.setSizeHint(size_hint)
                 self.features_list.addItem(list_item)
                 self.features_list.setItemWidget(list_item, item_widget)
+
+    def shutdown_application(self):
+        """Shutdown the application completely"""
+        # Show confirmation dialog
+        reply = QMessageBox.question(
+            self, 
+            "Confirm Shutdown", 
+            "Are you sure you want to shutdown the application?\n\nThis will close all windows and terminate the application completely.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Close the settings window first
+            self.accept()
+            
+            # Get the main application instance and quit
+            app = self.parent().parent() if self.parent() else None
+            if app:
+                app.quit()
+            else:
+                # Fallback: quit the entire application
+                sys.exit(0)

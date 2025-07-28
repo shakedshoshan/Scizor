@@ -8,6 +8,13 @@ The Scizor Desktop application now supports global hotkeys to control the dashbo
 ### Primary Hotkeys
 - **Ctrl + Alt + S**: Toggle dashboard visibility (show/hide)
 - **Ctrl + Alt + N**: Create note from selected text
+- **Ctrl +Alt + H**: Enhance selected text with AI
+- **Ctrl + Alt + G**: Generate AI response for selected text
+
+### UI Controls
+- **X Button**: Hide dashboard (same as Ctrl+Alt+S)
+- **⤢ Button**: Open expanded dashboard window
+- **⚙ Button**: Open settings
 
 ## How It Works
 
@@ -15,9 +22,12 @@ The Scizor Desktop application now supports global hotkeys to control the dashbo
 2. **Global Hotkeys**: 
    - Press `Ctrl + Alt + S` from anywhere to show/hide the dashboard
    - Select text in any application, then press `Ctrl + Alt + N` to create a note
+   - Select text and press `Ctrl + Alt + H` to enhance it with AI
+   - Select text and press `Ctrl + Alt + G` to generate an AI response
 3. **Dashboard Positioning**: The dashboard appears on the right side of the screen
 4. **Always on Top**: The dashboard stays on top of other windows when visible
 5. **Quick Note Creation**: Selected text automatically becomes note content with smart title generation
+6. **UI Controls**: Use the X button in the header to hide the dashboard (same as hotkey)
 
 ## Running the Application
 
@@ -35,43 +45,41 @@ python test_hotkey_fixed.py
 ```
 The dashboard will be visible initially for testing purposes.
 
+### Close Button Test
+```bash
+cd desktop
+python test_close_button.py
+```
+Test the X button functionality specifically.
+
 ## Features
 
 - **Global Hotkeys**: Works from any application
-- **Smooth Toggle**: Show/hide with single key combination
+- **Smooth Toggle**: Show/hide with single key combination or X button
 - **Background Operation**: Runs silently until needed
 - **Quick Note Creation**: Create notes from selected text with automatic title generation
 - **Smart Title Generation**: Uses first line of text or timestamp for note titles
 - **Clipboard Preservation**: Original clipboard content is preserved after note creation
 - **Proper Cleanup**: Hotkeys are properly cleaned up on exit
+- **UI Integration**: X button provides same functionality as Ctrl+Alt+S hotkey
 
 ## How to Create Notes from Text
 
 1. **Select Text**: Select any text in any application (browser, document, etc.)
-2. **Create Note**: Press `Ctrl + Alt + N` to create a note
-3. **Note Created**: The note will appear in your notes panel with:
-   - Auto-generated title from the first line of text
-   - Full content from your selection
-   - Default priority level
-   - Current timestamp
-4. **Clipboard Preserved**: Your original clipboard content is automatically restored
+2. **Press Hotkey**: Press `Ctrl + Alt + N`
+3. **Automatic Creation**: A note is created with the selected text as content
+4. **Smart Title**: The note gets a title based on the first line or timestamp
 
-## Technical Details
+## How to Hide/Show Dashboard
 
-- Uses the `keyboard` library for global hotkey detection
-- Uses the `pyperclip` library for clipboard access
-- Automatically captures selected text using Ctrl+C simulation
-- Preserves original clipboard content
-- Runs hotkey listener in a separate daemon thread
-- Integrates with existing PyQt6 application structure
-- Proper cleanup on application exit
-- Automatic dashboard show when creating notes
+1. **Using Hotkey**: Press `Ctrl + Alt + S` from any application
+2. **Using UI**: Click the X button in the dashboard header
+3. **Both Methods**: Both methods perform the same action - hiding the dashboard
+4. **Show Again**: Use `Ctrl + Alt + S` again to show the dashboard
 
 ## Troubleshooting
 
-If the hotkeys don't work:
-1. Make sure you're running the application with appropriate permissions
-2. Check if another application is using the same hotkey combination
-3. Verify that the `keyboard` and `pyperclip` libraries are properly installed
-4. For note creation: ensure text is selected before pressing `Ctrl + Alt + N`
-5. Try running the test script first to verify functionality 
+- **Hotkeys Not Working**: Make sure the application is running and has proper permissions
+- **Dashboard Not Showing**: Check if it's hidden and use `Ctrl + Alt + S` to show it
+- **Permission Issues**: Run as administrator if hotkeys don't work
+- **Multiple Instances**: Close any existing instances before starting a new one 

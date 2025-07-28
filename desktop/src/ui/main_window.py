@@ -4,7 +4,7 @@ Main window for Scizor Desktop Application
 Uses modular feature components for better organization
 """
 
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QHBoxLayout
 from PyQt6.QtCore import Qt
 
 # Import modular feature components
@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         self.main_layout.setSpacing(5)
         
     def setup_layout(self):
-        """Setup the main layout with modular feature components"""
+        """Setup the main layout with modular feature components using splitters"""
         # Create feature components
         self.header = HeaderPanel()
         self.clipboard_panel = ClipboardPanel()
@@ -60,13 +60,43 @@ class MainWindow(QMainWindow):
         self.generate_response_panel = GenerateResponsePanel()
         self.notes_panel = NotesPanel()
         
-        # Add components to layout
-        self.main_layout.addWidget(self.header)
-        self.main_layout.addWidget(self.clipboard_panel)
-        self.main_layout.addWidget(self.enhance_prompt_panel)
-        self.main_layout.addWidget(self.generate_response_panel)
-        self.main_layout.addWidget(self.notes_panel)
+        # Create main vertical splitter
+        self.main_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.main_splitter.setChildrenCollapsible(False)  # Prevent panels from being collapsed to zero size
         
+        # Create top section splitter for clipboard and AI panels
+        self.top_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.top_splitter.setChildrenCollapsible(False)
+        
+        # Create AI panels splitter (horizontal for side-by-side)
+        self.ai_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.ai_splitter.setChildrenCollapsible(False)
+        
+        # Add panels to splitters
+        self.top_splitter.addWidget(self.clipboard_panel)
+        self.ai_splitter.addWidget(self.enhance_prompt_panel)
+        self.ai_splitter.addWidget(self.generate_response_panel)
+        self.top_splitter.addWidget(self.ai_splitter)
+        
+        # Add to main splitter
+        self.main_splitter.addWidget(self.header)
+        self.main_splitter.addWidget(self.top_splitter)
+        self.main_splitter.addWidget(self.notes_panel)
+        
+        # Set initial sizes (percentages)
+        self.main_splitter.setSizes([50, 300, 200])  # Header, Top section, Notes
+        self.top_splitter.setSizes([150, 150])  # Clipboard, AI panels
+        self.ai_splitter.setSizes([200, 200])  # Enhance prompt, Generate response
+        
+        # Add main splitter to layout
+        self.main_layout.addWidget(self.main_splitter)
+        
+        # Store splitters for potential future use
+        self.splitters = {
+            'main': self.main_splitter,
+            'top': self.top_splitter,
+            'ai': self.ai_splitter
+        }
         
     def setup_connections(self):
         """Setup signal connections between feature components"""
@@ -150,6 +180,23 @@ class MainWindow(QMainWindow):
         y = (screen_geometry.height() - window_geometry.height()) // 2
         
         self.move(x, y)
+        
+    def get_panel_sizes(self):
+        """Get current panel sizes for saving/restoring layout"""
+        return {
+            'main_splitter': self.main_splitter.sizes(),
+            'top_splitter': self.top_splitter.sizes(),
+            'ai_splitter': self.ai_splitter.sizes()
+        }
+        
+    def set_panel_sizes(self, sizes_dict):
+        """Set panel sizes from saved layout"""
+        if 'main_splitter' in sizes_dict:
+            self.main_splitter.setSizes(sizes_dict['main_splitter'])
+        if 'top_splitter' in sizes_dict:
+            self.top_splitter.setSizes(sizes_dict['top_splitter'])
+        if 'ai_splitter' in sizes_dict:
+            self.ai_splitter.setSizes(sizes_dict['ai_splitter'])
         
     # # Event handlers for feature components
     def on_clipboard_cleared(self):

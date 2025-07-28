@@ -55,6 +55,7 @@ class DatabaseConnection:
             # Create tables
             self._create_notes_table(connection)
             self._create_clipboard_history_table(connection)
+            self._create_settings_table(connection)
             logger.info(f"Database initialized successfully: {self.db_path}")
             
         except Exception as e:
@@ -101,6 +102,27 @@ class DatabaseConnection:
             logger.info("Clipboard history table created/verified successfully")
         except Exception as e:
             logger.error(f"Failed to create clipboard_history table: {e}")
+            raise
+    
+    def _create_settings_table(self, connection: sqlite3.Connection):
+        """Create the settings table if it doesn't exist"""
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT UNIQUE NOT NULL,
+            setting_value TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        
+        try:
+            cursor = connection.cursor()
+            cursor.execute(create_table_sql)
+            connection.commit()
+            logger.info("Settings table created/verified successfully")
+        except Exception as e:
+            logger.error(f"Failed to create settings table: {e}")
             raise
     
     def get_connection(self) -> sqlite3.Connection:
@@ -155,6 +177,120 @@ class DatabaseConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit"""
         self.close_connection()
+    
+    def save_setting(self, key: str, value: str):
+        """Save a setting to the database"""
+        query = """
+        INSERT OR REPLACE INTO settings (setting_key, setting_value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        """
+        try:
+            self.execute_query(query, (key, value))
+            logger.info(f"Setting saved: {key}")
+        except Exception as e:
+            logger.error(f"Failed to save setting {key}: {e}")
+            raise
+    
+    def get_setting(self, key: str, default: str = None) -> str:
+        """Get a setting from the database"""
+        query = "SELECT setting_value FROM settings WHERE setting_key = ?"
+        try:
+            results = self.execute_query(query, (key,))
+            if results:
+                return results[0]['setting_value']
+            return default
+        except Exception as e:
+            logger.error(f"Failed to get setting {key}: {e}")
+            return default
+    
+    def save_layout_settings(self, settings: dict):
+        """Save layout settings to database"""
+        import json
+        try:
+            # Save feature order
+            feature_order = json.dumps(settings.get('feature_order', []))
+            self.save_setting('layout_feature_order', feature_order)
+            
+            # Save column settings
+            columns = str(settings.get('columns', 2))
+            self.save_setting('layout_columns', columns)
+            
+            features_per_column = str(settings.get('features_per_column', 2))
+            self.save_setting('layout_features_per_column', features_per_column)
+            
+            # Save visibility settings
+            visibility = json.dumps(settings.get('visibility', {}))
+            self.save_setting('layout_visibility', visibility)
+            
+            logger.info("Layout settings saved successfully")
+        except Exception as e:
+            logger.error(f"Failed to save layout settings: {e}")
+            raise
+    
+    def load_layout_settings(self) -> dict:
+        """Load layout settings from database"""
+        import json
+        try:
+            settings = {}
+            
+            # Load feature order
+            feature_order_str = self.get_setting('layout_feature_order', '[]')
+            feature_order = json.loads(feature_order_str)
+            
+            # If no features are saved, use defaults
+            if not feature_order:
+                feature_order = [
+                    'Clipboard History',
+                    'Notes',
+                    'AI Prompt Enhancement',
+                    'AI Smart Response'
+                ]
+            settings['feature_order'] = feature_order
+            
+            # Load column settings
+            columns_str = self.get_setting('layout_columns', '1')
+            settings['columns'] = int(columns_str)
+            
+            features_per_column_str = self.get_setting('layout_features_per_column', '2')
+            settings['features_per_column'] = int(features_per_column_str)
+            
+            # Load visibility settings
+            visibility_str = self.get_setting('layout_visibility', '{}')
+            visibility = json.loads(visibility_str)
+            
+            # If no visibility settings are saved, use defaults
+            if not visibility:
+                visibility = {
+                    'header': True,
+                    'clipboard_history': True,
+                    'notes': True,
+                    'ai_prompt_enhancement': True,
+                    'ai_smart_response': False
+                }
+            settings['visibility'] = visibility
+            
+            logger.info("Layout settings loaded successfully")
+            return settings
+        except Exception as e:
+            logger.error(f"Failed to load layout settings: {e}")
+            # Return default settings if loading fails
+            return {
+                'feature_order': [
+                    'Clipboard History',
+                    'Notes',
+                    'AI Prompt Enhancement',
+                    'AI Smart Response'
+                ],
+                'columns': 1,
+                'features_per_column': 2,
+                'visibility': {
+                    'header': True,
+                    'clipboard_history': True,
+                    'notes': True,
+                    'ai_prompt_enhancement': True,
+                    'ai_smart_response': False
+                }
+            }
 
 
 # Global database instance

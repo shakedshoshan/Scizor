@@ -4,8 +4,9 @@ Main window for Scizor Desktop Application
 Uses modular feature components for better organization
 """
 
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QHBoxLayout
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QHBoxLayout, QMenuBar, QMenu
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 
 # Import modular feature components
 from .features.desktop import (
@@ -21,10 +22,15 @@ class MainWindow(QMainWindow):
     def __init__(self):
         """Initialize the main window"""
         super().__init__()
+        self.current_settings = self.load_settings_from_database()
         self.init_ui()
         self.setup_layout()
         self.setup_connections()
         self.setup_hotkeys()
+        
+        # Apply initial layout based on settings
+        self.rebuild_layout()
+     
         
     def init_ui(self):
         """Initialize the UI components"""
@@ -32,9 +38,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Scizor Dashboard")
         self.setMinimumSize(350, 600)
         self.resize(400, 800)
-        
-        # Position window on the right side of the screen
-        self.position_on_right_side()
         
         # Set window flags for a dashboard-like appearance
         self.setWindowFlags(
@@ -51,6 +54,9 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(5, 5, 5, 5)
         self.main_layout.setSpacing(5)
         
+        # Position window on the right side of the screen
+        self.position_on_right_side()
+        
     def setup_layout(self):
         """Setup the main layout with modular feature components using splitters"""
         # Create feature components
@@ -64,38 +70,27 @@ class MainWindow(QMainWindow):
         self.main_splitter = QSplitter(Qt.Orientation.Vertical)
         self.main_splitter.setChildrenCollapsible(False)  # Prevent panels from being collapsed to zero size
         
-        # Create top section splitter for clipboard and AI panels
-        self.top_splitter = QSplitter(Qt.Orientation.Vertical)
-        self.top_splitter.setChildrenCollapsible(False)
-        
-        # Create AI panels splitter (horizontal for side-by-side)
-        self.ai_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.ai_splitter.setChildrenCollapsible(False)
-        
-        # Add panels to splitters
-        self.top_splitter.addWidget(self.clipboard_panel)
-        self.ai_splitter.addWidget(self.enhance_prompt_panel)
-        self.ai_splitter.addWidget(self.generate_response_panel)
-        self.top_splitter.addWidget(self.ai_splitter)
-        
-        # Add to main splitter
+        # Add main splitter to layout (panels will be added dynamically)
         self.main_splitter.addWidget(self.header)
-        self.main_splitter.addWidget(self.top_splitter)
-        self.main_splitter.addWidget(self.notes_panel)
-        
-        # Set initial sizes (percentages)
-        self.main_splitter.setSizes([50, 300, 200])  # Header, Top section, Notes
-        self.top_splitter.setSizes([150, 150])  # Clipboard, AI panels
-        self.ai_splitter.setSizes([200, 200])  # Enhance prompt, Generate response
-        
-        # Add main splitter to layout
         self.main_layout.addWidget(self.main_splitter)
         
-        # Store splitters for potential future use
-        self.splitters = {
-            'main': self.main_splitter,
-            'top': self.top_splitter,
-            'ai': self.ai_splitter
+        # Main splitter is already stored as self.main_splitter
+        
+        # Store panels for settings management
+        self.panels = {
+            'Header Panel': self.header,
+            'Clipboard History': self.clipboard_panel,
+            'Notes': self.notes_panel,
+            'AI Prompt Enhancement': self.enhance_prompt_panel,
+            'AI Smart Response': self.generate_response_panel
+        }
+        
+        # Store feature name mappings for visibility
+        self.feature_visibility_mapping = {
+            'Clipboard History': 'clipboard_history',
+            'Notes': 'notes',
+            'AI Prompt Enhancement': 'ai_prompt_enhancement',
+            'AI Smart Response': 'ai_smart_response'
         }
         
     def setup_connections(self):
@@ -103,6 +98,7 @@ class MainWindow(QMainWindow):
         # Header connections
         self.header.close_requested.connect(self.close)
         self.header.expand_requested.connect(self.open_expanded_window)
+        self.header.settings_requested.connect(self.open_settings)
         
         # Clipboard connections
         self.clipboard_panel.clipboard_cleared.connect(self.on_clipboard_cleared)
@@ -180,6 +176,26 @@ class MainWindow(QMainWindow):
         y = (screen_geometry.height() - window_geometry.height()) // 2
         
         self.move(x, y)
+        
+    def update_window_size_for_columns(self, columns):
+        """Update window size based on number of columns"""
+        base_width = 400  # Base width for single column
+        column_width = 350  # Width per additional column
+        min_width = 350
+        max_width = 1200  # Maximum width to prevent going off-screen
+        
+        if columns == 1:
+            new_width = base_width
+        else:
+            new_width = base_width + (columns - 1) * column_width
+            new_width = max(min_width, min(new_width, max_width))
+        
+        # Update window size
+        current_height = self.height()
+        self.resize(new_width, current_height)
+        
+        # Reposition window to stay on right side
+        self.position_on_right_side()
         
     def get_panel_sizes(self):
         """Get current panel sizes for saving/restoring layout"""
@@ -261,4 +277,139 @@ class MainWindow(QMainWindow):
             print(f"Error during cleanup: {e}")
         
         event.accept()
+        
+   
+    def get_default_settings(self):
+        """Get default settings for the main window"""
+        return {
+            'feature_order': [
+                'Clipboard History',
+                'Notes',
+                'AI Prompt Enhancement',
+                'AI Smart Response'
+            ],
+            'columns': 1,
+            'features_per_column': 2,
+            'visibility': {
+                'header': True,  # Header is always visible
+                'clipboard_history': True,
+                'notes': True,
+                'ai_prompt_enhancement': True,
+                'ai_smart_response': False
+            }
+        }
+    
+    def load_settings_from_database(self):
+        """Load settings from database or return defaults"""
+        try:
+            from database.db_connection import get_database
+            db = get_database()
+            settings = db.load_layout_settings()
+            return settings
+        except Exception as e:
+            print(f"Failed to load settings from database: {e}")
+            return self.get_default_settings()
+        
+    def open_settings(self):
+        """Open the settings window"""
+        try:
+            from .setting_window import SettingsWindow
+            settings_window = SettingsWindow(self)
+            settings_window.load_settings(self.current_settings)
+            settings_window.settings_applied.connect(self.apply_settings)
+            settings_window.exec()
+        except Exception as e:
+            print(f"Error opening settings window: {e}")
+            
+    def apply_settings(self, settings):
+        """Apply new settings to the main window"""
+        self.current_settings = settings
+        self.rebuild_layout()
+        
+        # Save settings to database
+        try:
+            from database.db_connection import get_database
+            db = get_database()
+            db.save_layout_settings(settings)
+        except Exception as e:
+            print(f"Failed to save settings to database: {e}")
+        
+    def rebuild_layout(self):
+        """Rebuild the layout based on current settings"""
+        # Clear existing layout - but keep the header
+        # Remove all widgets except header from main splitter
+        widgets_to_remove = []
+        for i in range(self.main_splitter.count()):
+            widget = self.main_splitter.widget(i)
+            if widget != self.header:
+                widgets_to_remove.append(widget)
+        
+        # Remove widgets safely
+        for widget in widgets_to_remove:
+            if widget:
+                widget.setParent(None)
+        
+        # Get visible features in order (excluding header)
+        visible_features = []
+        for feature_name in self.current_settings['feature_order']:
+            # Map feature names to visibility keys using the mapping
+            visibility_key = self.feature_visibility_mapping.get(feature_name, feature_name.lower().replace(' ', '_'))
+            if self.current_settings['visibility'].get(visibility_key, True):
+                visible_features.append(feature_name)
+                
+        if not visible_features:
+            return
+            
+        # Rebuild layout based on settings
+        columns = self.current_settings['columns']
+        features_per_column = self.current_settings['features_per_column']
+        
+        # Update window size based on number of columns
+        self.update_window_size_for_columns(columns)
+        
+        # Create new layout structure
+        if columns == 1:
+            # Single column layout
+            for feature_name in visible_features:
+                if feature_name in self.panels:
+                    self.main_splitter.addWidget(self.panels[feature_name])
+        else:
+            # Multi-column layout using horizontal splitter
+            # Create a horizontal splitter for columns
+            columns_splitter = QSplitter(Qt.Orientation.Horizontal)
+            columns_splitter.setChildrenCollapsible(False)
+            
+            # Create vertical splitters for each column
+            column_splitters = []
+            for col in range(columns):
+                column_splitter = QSplitter(Qt.Orientation.Vertical)
+                column_splitter.setChildrenCollapsible(False)
+                column_splitters.append(column_splitter)
+                columns_splitter.addWidget(column_splitter)
+            
+            # Distribute features across columns
+            for i, feature_name in enumerate(visible_features):
+                if feature_name in self.panels:
+                    # Calculate which column this feature should go in
+                    column_index = (i // features_per_column) % columns
+                    column_splitters[column_index].addWidget(self.panels[feature_name])
+            
+            # Add the columns splitter to main splitter
+            self.main_splitter.addWidget(columns_splitter)
+            
+            # Set equal column widths
+            column_widths = [self.width() // columns] * columns
+            columns_splitter.setSizes(column_widths)
+                
+        # Set splitter sizes - header gets smaller size
+        if self.main_splitter.count() > 0:
+            total_height = self.height()
+            header_height = 60  # Fixed header height
+            remaining_height = total_height - header_height
+            remaining_panels = self.main_splitter.count() - 1  # Exclude header
+            
+            if remaining_panels > 0:
+                panel_height = remaining_height // remaining_panels
+                sizes = [header_height] + [panel_height] * remaining_panels
+                self.main_splitter.setSizes(sizes)
         

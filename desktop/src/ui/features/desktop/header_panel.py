@@ -14,6 +14,7 @@ class HeaderPanel(QFrame):
     # Signals
     close_requested = pyqtSignal()
     expand_requested = pyqtSignal()
+    settings_requested = pyqtSignal()
     
     def __init__(self, parent=None):
         """Initialize the header panel"""
@@ -41,6 +42,24 @@ class HeaderPanel(QFrame):
                 color: white;
                 font-size: 16px;
                 font-weight: bold;
+            }
+        """)
+        
+        # Settings button
+        self.settings_btn = QPushButton("⚙")
+        self.settings_btn.setFixedSize(25, 25)
+        self.settings_btn.setToolTip("Settings")
+        self.settings_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
             }
         """)
         
@@ -81,11 +100,13 @@ class HeaderPanel(QFrame):
         
         layout.addWidget(self.title_label)
         layout.addStretch()
+        layout.addWidget(self.settings_btn)
         layout.addWidget(self.expand_btn)
         layout.addWidget(self.close_btn)
         
     def setup_connections(self):
         """Setup signal connections"""
+        self.settings_btn.clicked.connect(self.settings_requested.emit)
         self.expand_btn.clicked.connect(self.expand_requested.emit)
         self.close_btn.clicked.connect(self.close_requested.emit)
         

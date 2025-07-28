@@ -14,7 +14,7 @@ from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
 # Import enhanced feature components
 from .features.expend import (
-    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel, EnhancedEnhancePromptPanel
+    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel, EnhancedEnhancePromptPanel, EnhancedGenerateResponsePanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -101,11 +101,13 @@ class ExpandedWindow(QMainWindow):
         # Create enhanced feature panels
         self.clipboard_panel = EnhancedClipboardPanel()
         self.enhance_prompt_panel = EnhancedEnhancePromptPanel()
+        self.generate_response_panel = EnhancedGenerateResponsePanel()
         self.notes_panel = EnhancedNotesPanel()
         
         # Create tab pages
         self.setup_clipboard_tab()
         self.setup_enhance_prompt_tab()
+        self.setup_generate_response_tab()
         self.setup_notes_tab()
         
         # Add widgets to main layout
@@ -147,6 +149,18 @@ class ExpandedWindow(QMainWindow):
         enhance_prompt_layout.addWidget(self.enhance_prompt_panel)
         
         self.content_tabs.addTab(enhance_prompt_widget, "🚀 AI Prompt Enhancement")
+        
+    def setup_generate_response_tab(self):
+        """Setup the enhanced response generation tab"""
+        generate_response_widget = QWidget()
+        generate_response_layout = QVBoxLayout(generate_response_widget)
+        generate_response_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Add generate response panel with proper sizing
+        self.generate_response_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        generate_response_layout.addWidget(self.generate_response_panel)
+        
+        self.content_tabs.addTab(generate_response_widget, "🤖 AI Response Generation")
        
     def setup_connections(self):
         """Setup signal connections between components"""
@@ -168,6 +182,10 @@ class ExpandedWindow(QMainWindow):
         # Enhance Prompt connections
         self.enhance_prompt_panel.prompt_enhanced.connect(self.on_prompt_enhanced)
         self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
+        
+        # Generate Response connections
+        self.generate_response_panel.response_generated.connect(self.on_response_generated)
+        self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for expanded window control"""
@@ -281,6 +299,15 @@ class ExpandedWindow(QMainWindow):
     def on_enhance_prompt_error(self, error_message):
         """Handle enhance prompt error event"""
         self.status_label.setText(f"Enhance prompt error: {error_message}")
+        
+    def on_response_generated(self, result_data):
+        """Handle response generated event"""
+        generated_response = result_data.get('response', '')
+        self.status_label.setText(f"Response generated: {generated_response[:50]}...")
+        
+    def on_generate_response_error(self, error_message):
+        """Handle generate response error event"""
+        self.status_label.setText(f"Generate response error: {error_message}")
         
         
     def showEvent(self, event):

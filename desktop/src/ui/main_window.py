@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt
 
 # Import modular feature components
 from .features.desktop import (
-    HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel
+    HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel, GenerateResponsePanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -57,12 +57,14 @@ class MainWindow(QMainWindow):
         self.header = HeaderPanel()
         self.clipboard_panel = ClipboardPanel()
         self.enhance_prompt_panel = EnhancePromptPanel()
+        self.generate_response_panel = GenerateResponsePanel()
         self.notes_panel = NotesPanel()
         
         # Add components to layout
         self.main_layout.addWidget(self.header)
         self.main_layout.addWidget(self.clipboard_panel)
         self.main_layout.addWidget(self.enhance_prompt_panel)
+        self.main_layout.addWidget(self.generate_response_panel)
         self.main_layout.addWidget(self.notes_panel)
         
         
@@ -86,6 +88,10 @@ class MainWindow(QMainWindow):
         # Enhance Prompt connections
         self.enhance_prompt_panel.prompt_enhanced.connect(self.on_prompt_enhanced)
         self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
+        
+        # Generate Response connections
+        self.generate_response_panel.response_generated.connect(self.on_response_generated)
+        self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -182,6 +188,15 @@ class MainWindow(QMainWindow):
     def on_enhance_prompt_error(self, error_message):
         """Handle enhance prompt error event"""
         print(f"Enhance prompt error: {error_message}")
+        
+    def on_response_generated(self, result_data):
+        """Handle response generated event"""
+        generated_response = result_data.get('response', '')
+        print(f"Response generated: {generated_response[:50]}...")
+        
+    def on_generate_response_error(self, error_message):
+        """Handle generate response error event"""
+        print(f"Generate response error: {error_message}")
         
     def closeEvent(self, event):
         """Handle application close event"""

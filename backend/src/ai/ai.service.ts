@@ -17,6 +17,8 @@ import { Injectable, Logger, BadRequestException, ServiceUnavailableException } 
 import { ConfigService } from '@nestjs/config';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
+import { TextToSpeechDto, VoiceType, ResponseFormat } from './dto/text-to-speech.dto';
+import { getContentType } from './utils';
 
 @Injectable()
 export class AiService {
@@ -249,6 +251,62 @@ export class AiService {
 
     userPrompt += 'Please provide a relevant and helpful response.';
     return userPrompt;
+  }
+
+  /**
+   * Converts text to speech using OpenAI's Speech API
+   * @param textToSpeechDto - The text-to-speech request
+   * @returns Audio buffer in the specified format
+   */
+  async textToSpeech(textToSpeechDto: TextToSpeechDto): Promise<{ audioBuffer: Buffer; format: string }> {
+    try {
+      await this.ensureOpenAIInitialized();
+
+      const { text, voice, responseFormat, speed, model } = textToSpeechDto;
+
+      // Validate text length (OpenAI has a limit of 4096 characters)
+      if (text.length > 4096) {
+        throw new BadRequestException('Text is too long. Maximum length is 4096 characters.');
+      }
+
+      const speechResponse = await this.openai.audio.speech.create({
+        model: model || 'tts-1',
+        voice: voice || VoiceType.ALLOY,
+        input: text,
+        response_format: responseFormat || ResponseFormat.MP3,
+        speed: speed || 1,
+      });
+
+      // Convert the response to a Buffer
+      const arrayBuffer = await speechResponse.arrayBuffer();
+      const audioBuffer = Buffer.from(arrayBuffer);
+
+      this.logger.log(`Text-to-speech conversion successful. Audio size: ${audioBuffer.length} bytes`);
+      return { 
+        audioBuffer, 
+        format: getContentType(responseFormat || ResponseFormat.MP3)
+      };
+    } catch (error) {
+      this.logger.error('Error converting text to speech:', error.message);
+      
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      
+      if (error?.response?.status === 401) {
+        throw new BadRequestException('Invalid OpenAI API key. Please check your configuration.');
+      }
+      
+      if (error?.response?.status === 429) {
+        throw new BadRequestException('OpenAI API rate limit exceeded. Please try again later.');
+      }
+      
+      if (error?.response?.status === 400) {
+        throw new BadRequestException('Invalid request parameters. Please check your input.');
+      }
+      
+      throw new BadRequestException('Failed to convert text to speech. Please try again.');
+    }
   }
 
   /**

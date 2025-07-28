@@ -13,10 +13,12 @@
  * - Delegates business logic to AiService
  */
 
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AiService } from './ai.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
+import { TextToSpeechDto } from './dto/text-to-speech.dto';
 
 @Controller('ai')
 export class AiController {
@@ -77,6 +79,38 @@ export class AiController {
   }
 
   /**
+   * POST /ai/text-to-speech
+   * Converts text to speech using OpenAI's Speech API
+   * 
+   * @param textToSpeechDto - The text-to-speech request data
+   * @param res - Express response object for streaming audio
+   * @returns Audio file in the specified format
+   */
+  @Post('text-to-speech')
+  @HttpCode(HttpStatus.OK)
+  async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto, @Res() res: Response) {
+    this.logger.log(`Converting text to speech with voice: ${textToSpeechDto.voice || 'alloy'}`);
+    
+    try {
+      const result = await this.aiService.textToSpeech(textToSpeechDto);
+      
+      // Set appropriate headers for audio response
+      const contentType = this.getContentType(result.format);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', result.audioBuffer.length.toString());
+      res.setHeader('Content-Disposition', 'attachment; filename="speech.mp3"');
+      
+      // Send the audio buffer
+      res.send(result.audioBuffer);
+      
+      this.logger.log('Text-to-speech conversion completed successfully');
+    } catch (error) {
+      this.logger.error('Text-to-speech conversion failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * GET /ai/health
    * Health check endpoint to verify OpenAI service status
    * 
@@ -98,5 +132,19 @@ export class AiController {
       this.logger.error('Health check failed:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Helper method to get the appropriate content type for audio formats
+   */
+  private getContentType(format: string): string {
+    const contentTypes = {
+      'mp3': 'audio/mpeg',
+      'opus': 'audio/opus',
+      'aac': 'audio/aac',
+      'flac': 'audio/flac',
+    };
+    
+    return contentTypes[format] || 'audio/mpeg';
   }
 }

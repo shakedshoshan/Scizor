@@ -422,4 +422,46 @@ describe('AiService', () => {
       expect(prompt).not.toContain('Maximum Length:');
     });
   });
+
+  describe('textToSpeech', () => {
+    it('should convert text to speech successfully', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      const mockResponse = {
+        arrayBuffer: jest.fn().mockResolvedValue(mockAudioBuffer),
+      };
+
+      jest.spyOn(service['openai'].audio.speech, 'create').mockResolvedValue(mockResponse);
+
+      const textToSpeechDto = {
+        text: 'Hello, world!',
+        voice: 'alloy' as any,
+        responseFormat: 'mp3' as any,
+        speed: 1,
+        model: 'tts-1',
+      };
+
+      const result = await service.textToSpeech(textToSpeechDto);
+
+      expect(result.audioBuffer).toEqual(mockAudioBuffer);
+      expect(result.format).toBe('mp3');
+      expect(service['openai'].audio.speech.create).toHaveBeenCalledWith({
+        model: 'tts-1',
+        voice: 'alloy',
+        input: 'Hello, world!',
+        response_format: 'mp3',
+        speed: 1,
+      });
+    });
+
+    it('should throw error for text longer than 4096 characters', async () => {
+      const longText = 'a'.repeat(4097);
+      const textToSpeechDto = {
+        text: longText,
+      };
+
+      await expect(service.textToSpeech(textToSpeechDto)).rejects.toThrow(
+        'Text is too long. Maximum length is 4096 characters.',
+      );
+    });
+  });
 }); 

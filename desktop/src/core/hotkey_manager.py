@@ -354,7 +354,7 @@ class HotkeyManager(QObject):
     def _on_text_to_speech_hotkey(self):
         """Handle the text-to-speech hotkey press - capture selected text and convert to speech"""
         try:
-            # Store current clipboard content
+            # # Store current clipboard content
             original_clipboard = pyperclip.paste()
             
             # Simulate Ctrl+C to copy selected text
@@ -371,12 +371,9 @@ class HotkeyManager(QObject):
                 pyperclip.copy(original_clipboard)
             
             if selected_text and selected_text != original_clipboard:
-                # Validate text length and content
-                if len(selected_text) < 3:
-                    print("Selected text is too short. Please select more text to convert to speech.")
-                    return
                 
-                if len(selected_text) > 4096:
+                
+                if len(selected_text) > 10000:
                     print("Selected text is too long. Please select a shorter text to convert to speech.")
                     return
                 

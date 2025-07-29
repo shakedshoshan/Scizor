@@ -16,6 +16,7 @@ from PyQt6.QtGui import QCursor
 from core.clipboard_manager import get_clipboard_manager
 from ui.component.spinner import WaitingSpinner
 from ui.component.popup_window import show_popup
+from core.text_to_speech import TextToSpeech
 
 
 class EnhancePromptWorker(QThread):
@@ -56,6 +57,31 @@ class GenerateResponseWorker(QThread):
             generate_service = get_generate_response_service()
             result = generate_service.generate_response(self.text)
             self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class TextToSpeechWorker(QThread):
+    """Worker thread for text-to-speech conversion to avoid blocking the UI"""
+    
+    finished = pyqtSignal()  # Signal emitted when TTS is complete
+    error = pyqtSignal(str)  # Signal emitted when an error occurs
+    
+    def __init__(self, text: str, voice: str = "alloy"):
+        super().__init__()
+        self.text = text
+        self.voice = voice
+        
+    def run(self):
+        """Run the text-to-speech conversion in a separate thread"""
+        try:
+            tts = TextToSpeech()
+            thread = tts.text_to_speech_and_play(self.text, voice=self.voice)
+            if thread:
+                thread.join()  # Wait for audio playback to complete
+                self.finished.emit()
+            else:
+                self.error.emit("Failed to convert text to speech")
         except Exception as e:
             self.error.emit(str(e))
 
@@ -138,6 +164,7 @@ class HotkeyManager(QObject):
     create_note_requested = pyqtSignal(str)  # Signal to create note with text
     enhance_prompt_requested = pyqtSignal(str)  # Signal to enhance prompt with text
     generate_response_requested = pyqtSignal(str)  # Signal to generate response with text
+    text_to_speech_requested = pyqtSignal(str)  # Signal to convert text to speech
     show_spinner_requested = pyqtSignal(str)  # Signal to show spinner
     hide_spinner_requested = pyqtSignal()  # Signal to hide spinner
     update_spinner_text_requested = pyqtSignal(str)  # Signal to update spinner text
@@ -182,6 +209,7 @@ class HotkeyManager(QObject):
             keyboard.add_hotkey('ctrl+alt+n', self._on_create_note_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+h', self._on_enhance_prompt_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+g', self._on_generate_response_hotkey, suppress=True)
+            keyboard.add_hotkey('ctrl+alt+r', self._on_text_to_speech_hotkey, suppress=True)
             
             # Keep the thread alive
             while self.is_running:
@@ -323,6 +351,49 @@ class HotkeyManager(QObject):
         except Exception as e:
             print(f"Error in generate response hotkey: {e}")
     
+    def _on_text_to_speech_hotkey(self):
+        """Handle the text-to-speech hotkey press - capture selected text and convert to speech"""
+        try:
+            # Store current clipboard content
+            original_clipboard = pyperclip.paste()
+            
+            # Simulate Ctrl+C to copy selected text
+            keyboard.send('ctrl+c')
+            
+            # Small delay to ensure copy operation completes
+            time.sleep(0.15)  # Increased delay for better reliability
+            
+            # Get the selected text from clipboard
+            selected_text = pyperclip.paste().strip()
+            
+            # Restore original clipboard content
+            if original_clipboard != selected_text:
+                pyperclip.copy(original_clipboard)
+            
+            if selected_text and selected_text != original_clipboard:
+                # Validate text length and content
+                if len(selected_text) < 3:
+                    print("Selected text is too short. Please select more text to convert to speech.")
+                    return
+                
+                if len(selected_text) > 4096:
+                    print("Selected text is too long. Please select a shorter text to convert to speech.")
+                    return
+                
+                # Save the copied text to clipboard history using thread-safe method
+                try:
+                    self.clipboard_manager.add_to_history(selected_text)
+                except Exception as e:
+                    print(f"Failed to add to clipboard history: {e}")
+                
+                # Start text-to-speech conversion with spinner - use signals for thread safety
+                self._text_to_speech_with_spinner(selected_text)
+            else:
+                print("No text selected. Please select text first, then press Ctrl+Alt+R.")
+                
+        except Exception as e:
+            print(f"Error in text-to-speech hotkey: {e}")
+    
     def _enhance_with_spinner(self, text: str):
         """Enhance text with spinner feedback"""
         try:
@@ -353,6 +424,22 @@ class HotkeyManager(QObject):
             
         except Exception as e:
             print(f"Error starting response generation: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _text_to_speech_with_spinner(self, text: str):
+        """Convert text to speech with spinner feedback"""
+        try:
+            # Show loading spinner
+            self.show_spinner_requested.emit("Converting to speech...")
+            
+            # Create and start worker thread
+            self.floating_spinner.worker = TextToSpeechWorker(text, voice="nova")
+            self.floating_spinner.worker.finished.connect(self._on_tts_complete)
+            self.floating_spinner.worker.error.connect(self._on_tts_error)
+            self.floating_spinner.worker.start()
+            
+        except Exception as e:
+            print(f"Error starting text-to-speech: {e}")
             self.hide_spinner_requested.emit()
     
     def _on_enhancement_complete(self, result: Dict):
@@ -430,6 +517,35 @@ class HotkeyManager(QObject):
             print("Error popup signal emitted")
         except Exception as e:
             print(f"Error handling response generation error: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _on_tts_complete(self):
+        """Handle successful text-to-speech completion"""
+        try:
+            # Show success message briefly
+            self.update_spinner_text_requested.emit("Playing audio...")
+            
+            # Hide spinner after a short delay
+            QTimer.singleShot(1000, lambda: self.hide_spinner_requested.emit())
+            
+            print("Text converted to speech and played successfully!")
+            
+        except Exception as e:
+            print(f"Error completing text-to-speech: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _on_tts_error(self, error_msg: str):
+        """Handle text-to-speech error"""
+        try:
+            print(f"Text-to-speech error: {error_msg}")
+            self.update_spinner_text_requested.emit("TTS Error")
+            QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
+            
+            # Show error popup using signal for thread safety
+            self.show_popup_requested.emit("Text-to-Speech Error", f"Failed to convert text to speech.\n\nError: {error_msg}")
+            print("TTS error popup signal emitted")
+        except Exception as e:
+            print(f"Error handling text-to-speech error: {e}")
             self.hide_spinner_requested.emit()
     
     @pyqtSlot(str)

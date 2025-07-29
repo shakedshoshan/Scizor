@@ -1,5 +1,5 @@
 /**
- * text-to-speech.dto.ts - Text to Speech DTO
+ * text-to-speech.dto.ts
  * 
  * Data Transfer Object for text-to-speech requests.
  * Defines the structure and validation rules for converting

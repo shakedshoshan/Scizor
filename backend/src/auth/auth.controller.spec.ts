@@ -11,6 +11,8 @@ import { FirestoreService } from './firestore.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
+  let authService: AuthService;
+  let firestoreService: FirestoreService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -19,22 +21,34 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: {
-            // Add mock methods if needed
+            // Add mock methods as needed
           },
         },
         {
           provide: FirestoreService,
           useValue: {
-            addTextDocument: jest.fn().mockResolvedValue('test-doc-id'),
+            addTextDocument: jest.fn(),
+            createUser: jest.fn(),
+            getUserToken: jest.fn(),
           },
         },
       ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
+    authService = module.get<AuthService>(AuthService);
+    firestoreService = module.get<FirestoreService>(FirestoreService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should have auth service', () => {
+    expect(authService).toBeDefined();
+  });
+
+  it('should have firestore service', () => {
+    expect(firestoreService).toBeDefined();
   });
 }); 

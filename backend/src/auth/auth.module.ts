@@ -6,6 +6,7 @@
  * - JWT token management
  * - Session handling
  * - Error handling and graceful fallbacks
+ * - Firestore database operations
  * 
  * Responsibilities:
  * - Imports required dependencies (ConfigModule)
@@ -15,11 +16,14 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { FirestoreService } from './firestore.service';
 
 @Module({
   imports: [ConfigModule],
-  controllers: [],
-  providers: [],
-  exports: [], // Export services for use in other modules if needed
+  controllers: [AuthController],
+  providers: [AuthService, FirestoreService],
+  exports: [AuthService, FirestoreService], // Export services for use in other modules if needed
 })
 export class AuthModule {} 

@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config/validation.schema';
 import { AiModule } from './ai/ai.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { AiModule } from './ai/ai.module';
       validationSchema,
     }),
     AiModule, // AI Module - Handles AI-related functionality
+    AuthModule, // Auth Module - Handles authentication and Firestore operations
   ],
   controllers: [AppController],
   providers: [AppService],

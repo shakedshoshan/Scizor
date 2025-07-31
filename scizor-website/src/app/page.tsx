@@ -1,3 +1,5 @@
+'use client';
+
 import { Header, Hero, Features, HowItWorks, Download, Footer } from './components';
 
 export default function Home() {

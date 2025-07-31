@@ -17,7 +17,7 @@ const BasicAuth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
   
-  const { createUserToken, loading: tokenLoading, error: tokenError } = useCreateUserToken();
+  const { createUserToken } = useCreateUserToken();
 
   // Navigate to home page only after successful sign in
   useEffect(() => {
@@ -54,8 +54,8 @@ const BasicAuth: React.FC = () => {
       }
       
       setJustSignedIn(true);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -80,8 +80,8 @@ const BasicAuth: React.FC = () => {
       }
       
       setJustSignedIn(true);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }

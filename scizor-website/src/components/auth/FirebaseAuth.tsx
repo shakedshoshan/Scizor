@@ -4,6 +4,7 @@ import React from 'react';
 import { getAuth, signOut } from 'firebase/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import FirebaseUIWrapper from './FirebaseUIWrapper';
+import Image from 'next/image';
 
 // FirebaseUI config
 const uiConfig = {
@@ -24,13 +25,13 @@ const uiConfig = {
   tosUrl: '/terms',
   privacyPolicyUrl: '/privacy',
   callbacks: {
-    signInSuccessWithAuthResult: function(authResult: any, redirectUrl: string) {
+    signInSuccessWithAuthResult: function() {
       // User successfully signed in.
       // Return type determines whether we continue the redirect automatically
       // or whether we leave that to developer to handle.
       return true;
     },
-    signInFailure: function(error: any) {
+    signInFailure: function(error: unknown) {
       // Some unrecoverable error occurred during sign-in.
       console.error('Sign-in error:', error);
       return Promise.resolve();
@@ -68,9 +69,11 @@ const FirebaseAuth: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome!</h2>
           <div className="mb-4">
             {user.photoURL && (
-              <img
+              <Image
                 src={user.photoURL}
                 alt="Profile"
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-full mx-auto mb-2"
               />
             )}

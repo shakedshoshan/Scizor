@@ -26,4 +26,20 @@ export class UpdateUserTokenDto {
   @IsNumber()
   @Min(0)
   tokens: number;
+}
+
+export class DeductTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  user_id: string;
+
+  @IsNumber()
+  @Min(1)
+  cost: number;
+}
+
+export class DeductTokenResultDto {
+  success: boolean;
+  message: string;
+  remainingTokens?: number;
 } 

@@ -7,18 +7,19 @@
  * - Error handling and graceful fallbacks
  * 
  * Responsibilities:
- * - Imports required dependencies (ConfigModule)
+ * - Imports required dependencies (ConfigModule, AuthModule)
  * - Declares AI controllers and services
  * - Provides AI-related functionality to the application
  */
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from '../auth/auth.module';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, AuthModule],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService], // Export service for use in other modules if needed

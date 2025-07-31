@@ -36,19 +36,29 @@ export class AiController {
   @Post('enhance-prompt')
   @HttpCode(HttpStatus.OK)
   async enhancePrompt(@Body() enhancePromptDto: EnhancePromptDto) {
-    this.logger.log(`Enhancing prompt with type: ${enhancePromptDto.enhancementType || 'general'}`);
+    this.logger.log(`Enhancing prompt for user: ${enhancePromptDto.user_id} with type: ${enhancePromptDto.enhancementType || 'general'}`);
     
     try {
       const result = await this.aiService.enhancePrompt(enhancePromptDto);
-      this.logger.log('Prompt enhancement completed successfully');
+      this.logger.log(`Prompt enhancement completed successfully for user: ${enhancePromptDto.user_id}`);
       return {
         success: true,
         data: result,
         message: 'Prompt enhanced successfully',
       };
     } catch (error) {
-      this.logger.error('Prompt enhancement failed:', error.message);
-      throw error;
+      this.logger.error(`Prompt enhancement failed for user: ${enhancePromptDto.user_id}:`, error.message);
+      
+      // Return structured error response
+      return {
+        success: false,
+        error: {
+          message: error.message || 'Failed to enhance prompt',
+          type: error.constructor.name,
+          timestamp: new Date().toISOString(),
+        },
+        message: 'Prompt enhancement failed',
+      };
     }
   }
 
@@ -62,19 +72,29 @@ export class AiController {
   @Post('generate-response')
   @HttpCode(HttpStatus.OK)
   async generateResponse(@Body() generateResponseDto: GenerateResponseDto) {
-    this.logger.log(`Generating response with type: ${generateResponseDto.responseType || 'general'}`);
+    this.logger.log(`Generating response for user: ${generateResponseDto.user_id} with type: ${generateResponseDto.responseType || 'general'}`);
     
     try {
       const result = await this.aiService.generateResponse(generateResponseDto);
-      this.logger.log('Response generation completed successfully');
+      this.logger.log(`Response generation completed successfully for user: ${generateResponseDto.user_id}`);
       return {
         success: true,
         data: result,
         message: 'Response generated successfully',
       };
     } catch (error) {
-      this.logger.error('Response generation failed:', error.message);
-      throw error;
+      this.logger.error(`Response generation failed for user: ${generateResponseDto.user_id}:`, error.message);
+      
+      // Return structured error response
+      return {
+        success: false,
+        error: {
+          message: error.message || 'Failed to generate response',
+          type: error.constructor.name,
+          timestamp: new Date().toISOString(),
+        },
+        message: 'Response generation failed',
+      };
     }
   }
 
@@ -89,7 +109,7 @@ export class AiController {
   @Post('text-to-speech')
   @HttpCode(HttpStatus.OK)
   async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto, @Res() res: Response) {
-    this.logger.log(`Converting text to speech with voice: ${textToSpeechDto.voice || 'alloy'}`);
+    this.logger.log(`Converting text to speech for user: ${textToSpeechDto.user_id} with voice: ${textToSpeechDto.voice || 'alloy'}`);
     
     try {
       const result = await this.aiService.textToSpeech(textToSpeechDto);
@@ -103,10 +123,20 @@ export class AiController {
       // Send the audio buffer
       res.send(result.audioBuffer);
       
-      this.logger.log('Text-to-speech conversion completed successfully');
+      this.logger.log(`Text-to-speech conversion completed successfully for user: ${textToSpeechDto.user_id}`);
     } catch (error) {
-      this.logger.error('Text-to-speech conversion failed:', error.message);
-      throw error;
+      this.logger.error(`Text-to-speech conversion failed for user: ${textToSpeechDto.user_id}:`, error.message);
+      
+      // Return structured error response for text-to-speech
+      res.status(400).json({
+        success: false,
+        error: {
+          message: error.message || 'Failed to convert text to speech',
+          type: error.constructor.name,
+          timestamp: new Date().toISOString(),
+        },
+        message: 'Text-to-speech conversion failed',
+      });
     }
   }
 

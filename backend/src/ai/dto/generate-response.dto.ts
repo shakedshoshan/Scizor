@@ -21,6 +21,10 @@ export enum ResponseType {
 export class GenerateResponseDto {
   @IsString()
   @IsNotEmpty()
+  user_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   content: string;
 
   @IsOptional()

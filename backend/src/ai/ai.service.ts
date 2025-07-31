@@ -15,10 +15,11 @@
 
 import { Injectable, Logger, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
 import { TextToSpeechDto, VoiceType, ResponseFormat } from './dto/text-to-speech.dto';
-import { getContentType } from './utils';
+import { getContentType, serviceErrorHandler } from './utils';
 
 @Injectable()
 export class AiService {
@@ -27,7 +28,17 @@ export class AiService {
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
 
-  constructor(private readonly configService: ConfigService) {
+  // Token costs for different AI operations
+  private readonly TOKEN_COSTS = {
+    ENHANCE_PROMPT: 1,
+    GENERATE_RESPONSE: 1,
+    TEXT_TO_SPEECH: 1,
+  };
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly firestoreService: FirestoreService,
+  ) {
     this.initializeOpenAI();
   }
 
@@ -86,6 +97,50 @@ export class AiService {
   }
 
   /**
+   * Deducts tokens from user account before performing AI operations
+   * @param userId - The user ID to deduct tokens from
+   * @param operationType - The type of AI operation being performed
+   * @returns Promise<{success: boolean, message: string, errorType?: string}> - Result with detailed message
+   */
+  private async deductTokensForOperation(userId: string, operationType: keyof typeof this.TOKEN_COSTS): Promise<{success: boolean, message: string, errorType?: string}> {
+    try {
+      const cost = this.TOKEN_COSTS[operationType];
+      const result = await this.firestoreService.deductUserTokens(userId, cost);
+      
+      if (!result.success) {
+        this.logger.warn(`Token deduction failed for user ${userId}: ${result.message}`);
+        
+        // Determine error type based on the message
+        let errorType = 'UNKNOWN_ERROR';
+        if (result.message.includes('User not found')) {
+          errorType = 'USER_NOT_FOUND';
+        } else if (result.message.includes('Insufficient tokens')) {
+          errorType = 'INSUFFICIENT_TOKENS';
+        }
+        
+        return {
+          success: false,
+          message: result.message,
+          errorType
+        };
+      }
+      
+      this.logger.log(`Successfully deducted ${cost} tokens for ${operationType} operation. User ${userId} has ${result.remainingTokens} tokens remaining.`);
+      return {
+        success: true,
+        message: `Successfully deducted ${cost} tokens. You have ${result.remainingTokens} tokens remaining.`
+      };
+    } catch (error) {
+      this.logger.error(`Error deducting tokens for user ${userId}:`, error.message);
+      return {
+        success: false,
+        message: 'Failed to process token deduction. Please try again.',
+        errorType: 'SYSTEM_ERROR'
+      };
+    }
+  }
+
+  /**
    * Enhances a prompt using OpenAI GPT models
    * @param enhancePromptDto - The prompt enhancement request
    * @returns Enhanced prompt with improved context and specificity
@@ -94,7 +149,30 @@ export class AiService {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { prompt, enhancementType, context, targetAudience } = enhancePromptDto;
+      const { user_id, prompt, enhancementType, context, targetAudience } = enhancePromptDto;
+
+      // Validate required fields
+      if (!user_id) {
+        throw new BadRequestException('User ID is required to perform this operation.');
+      }
+      if (!prompt) {
+        throw new BadRequestException('Prompt text is required for enhancement.');
+      }
+
+      // Deduct tokens before performing the operation
+      const tokenResult = await this.deductTokensForOperation(user_id, 'ENHANCE_PROMPT');
+      if (!tokenResult.success) {
+        switch (tokenResult.errorType) {
+          case 'USER_NOT_FOUND':
+            throw new BadRequestException('User account not found. Please check your user ID or create an account.');
+          case 'INSUFFICIENT_TOKENS':
+            throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'SYSTEM_ERROR':
+            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+          default:
+            throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
+        }
+      }
 
       const systemPrompt = this.getEnhancementSystemPrompt(enhancementType || EnhancementType.GENERAL);
       const userPrompt = this.buildEnhancementUserPrompt(prompt, context, targetAudience);
@@ -115,20 +193,7 @@ export class AiService {
       return { enhancedPrompt };
     } catch (error) {
       this.logger.error('Error enhancing prompt:', error.message);
-      
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      
-      if (error?.response?.status === 401) {
-        throw new BadRequestException('Invalid OpenAI API key. Please check your configuration.');
-      }
-      
-      if (error?.response?.status === 429) {
-        throw new BadRequestException('OpenAI API rate limit exceeded. Please try again later.');
-      }
-      
-      throw new BadRequestException('Failed to enhance prompt. Please try again.');
+      throw serviceErrorHandler(error, 'enhance prompt');
     }
   }
 
@@ -141,7 +206,30 @@ export class AiService {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { content, responseType, context, tone, maxLength } = generateResponseDto;
+      const { user_id, content, responseType, context, tone, maxLength } = generateResponseDto;
+
+      // Validate required fields
+      if (!user_id) {
+        throw new BadRequestException('User ID is required to perform this operation.');
+      }
+      if (!content) {
+        throw new BadRequestException('Content is required to generate a response.');
+      }
+
+      // Deduct tokens before performing the operation
+      const tokenResult = await this.deductTokensForOperation(user_id, 'GENERATE_RESPONSE');
+      if (!tokenResult.success) {
+        switch (tokenResult.errorType) {
+          case 'USER_NOT_FOUND':
+            throw new BadRequestException('User account not found. Please check your user ID or create an account.');
+          case 'INSUFFICIENT_TOKENS':
+            throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'SYSTEM_ERROR':
+            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+          default:
+            throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
+        }
+      }
 
       const systemPrompt = this.getResponseSystemPrompt(responseType || ResponseType.GENERAL);
       const userPrompt = this.buildResponseUserPrompt(content, context, tone, maxLength);
@@ -162,20 +250,7 @@ export class AiService {
       return { response };
     } catch (error) {
       this.logger.error('Error generating response:', error.message);
-      
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      
-      if (error?.response?.status === 401) {
-        throw new BadRequestException('Invalid OpenAI API key. Please check your configuration.');
-      }
-      
-      if (error?.response?.status === 429) {
-        throw new BadRequestException('OpenAI API rate limit exceeded. Please try again later.');
-      }
-      
-      throw new BadRequestException('Failed to generate response. Please try again.');
+      throw serviceErrorHandler(error, 'generate response');
     }
   }
 
@@ -262,11 +337,34 @@ export class AiService {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { text, voice, responseFormat, speed, model } = textToSpeechDto;
+      const { user_id, text, voice, responseFormat, speed, model } = textToSpeechDto;
+
+      // Validate required fields
+      if (!user_id) {
+        throw new BadRequestException('User ID is required to perform this operation.');
+      }
+      if (!text) {
+        throw new BadRequestException('Text content is required for text-to-speech conversion.');
+      }
+
+      // Deduct tokens before performing the operation
+      const tokenResult = await this.deductTokensForOperation(user_id, 'TEXT_TO_SPEECH');
+      if (!tokenResult.success) {
+        switch (tokenResult.errorType) {
+          case 'USER_NOT_FOUND':
+            throw new BadRequestException('User account not found. Please check your user ID or create an account.');
+          case 'INSUFFICIENT_TOKENS':
+            throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'SYSTEM_ERROR':
+            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+          default:
+            throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
+        }
+      }
 
       // Validate text length (OpenAI has a limit of 4096 characters)
       if (text.length > 4096) {
-        throw new BadRequestException('Text is too long. Maximum length is 4096 characters.');
+        throw new BadRequestException('Text is too long. Maximum length is 4096 characters. Please shorten your text and try again.');
       }
 
       const speechResponse = await this.openai.audio.speech.create({
@@ -288,24 +386,7 @@ export class AiService {
       };
     } catch (error) {
       this.logger.error('Error converting text to speech:', error.message);
-      
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      
-      if (error?.response?.status === 401) {
-        throw new BadRequestException('Invalid OpenAI API key. Please check your configuration.');
-      }
-      
-      if (error?.response?.status === 429) {
-        throw new BadRequestException('OpenAI API rate limit exceeded. Please try again later.');
-      }
-      
-      if (error?.response?.status === 400) {
-        throw new BadRequestException('Invalid request parameters. Please check your input.');
-      }
-      
-      throw new BadRequestException('Failed to convert text to speech. Please try again.');
+      throw serviceErrorHandler(error, 'convert text to speech');
     }
   }
 

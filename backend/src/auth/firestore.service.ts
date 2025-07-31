@@ -16,7 +16,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { CreateTextDto } from './dto/text.dto';
-import { CreateUserTokenDto, UserTokenDto, UpdateUserTokenDto } from './dto/user-token.dto';
+import { CreateUserTokenDto, UserTokenDto, UpdateUserTokenDto, DeductTokenDto, DeductTokenResultDto } from './dto/user-token.dto';
 
 @Injectable()
 export class FirestoreService implements OnModuleInit {
@@ -161,6 +161,68 @@ export class FirestoreService implements OnModuleInit {
       };
     } catch (error) {
       throw new Error(`Failed to update user token: ${error.message}`);
+    }
+  }
+
+  /**
+   * Deduct tokens from user if they have enough tokens
+   */
+  async deductUserTokens(userId: string, cost: number): Promise<DeductTokenResultDto> {
+    try {
+      // Check if user exists
+      const userExists = await this.userExists(userId);
+      if (!userExists) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // Get the user document
+      const querySnapshot = await this.firestore
+        .collection('user_token')
+        .where('user_id', '==', userId)
+        .limit(1)
+        .get();
+
+      if (querySnapshot.empty) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      const doc = querySnapshot.docs[0];
+      const currentTokens = doc.data().tokens;
+
+      // Check if user has enough tokens
+      if (currentTokens < cost) {
+        return {
+          success: false,
+          message: `Insufficient tokens. Required: ${cost}, Available: ${currentTokens}`,
+        };
+      }
+
+      // Calculate remaining tokens
+      const remainingTokens = currentTokens - cost;
+
+      // Update the document with remaining tokens
+      await doc.ref.update({
+        tokens: remainingTokens,
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Return success with remaining tokens
+      return {
+        success: true,
+        message: `Successfully deducted ${cost} tokens`,
+        remainingTokens: remainingTokens,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to deduct tokens: ${error.message}`,
+      };
     }
   }
 

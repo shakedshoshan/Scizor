@@ -4,12 +4,12 @@ import React, { useEffect, useRef } from 'react';
 import { getAuth } from 'firebase/auth';
 
 interface FirebaseUIWrapperProps {
-  config: any;
+  config: Record<string, unknown>;
   containerId: string;
 }
 
 const FirebaseUIWrapper: React.FC<FirebaseUIWrapperProps> = ({ config, containerId }) => {
-  const uiRef = useRef<any>(null);
+  const uiRef = useRef<{ start: (selector: string, config: Record<string, unknown>) => void; reset: () => void } | null>(null);
 
   useEffect(() => {
     const initFirebaseUI = async () => {
@@ -20,10 +20,10 @@ const FirebaseUIWrapper: React.FC<FirebaseUIWrapperProps> = ({ config, container
         script.onload = () => {
           const auth = getAuth();
           if (!uiRef.current) {
-            // @ts-ignore - FirebaseUI is loaded globally
-            uiRef.current = new (window as any).firebaseui.auth.AuthUI(auth);
+            // @ts-expect-error - FirebaseUI is loaded globally
+            uiRef.current = new (window as Record<string, unknown>).firebaseui.auth.AuthUI(auth);
           }
-          uiRef.current.start(`#${containerId}`, config);
+          uiRef.current?.start(`#${containerId}`, config);
         };
         document.head.appendChild(script);
 

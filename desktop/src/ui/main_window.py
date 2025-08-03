@@ -265,6 +265,7 @@ class MainWindow(QMainWindow):
         """Handle application close event"""
         try:
             # Stop hotkey manager
+            
             stop_hotkey_manager()
             
             # Stop clipboard monitoring

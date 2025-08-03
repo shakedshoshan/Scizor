@@ -12,6 +12,7 @@ from PyQt6.QtGui import QAction
 from .features.desktop import (
     HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel, GenerateResponsePanel
 )
+from .auth.auth_panel import AuthPanel
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 
@@ -61,6 +62,7 @@ class MainWindow(QMainWindow):
         """Setup the main layout with modular feature components using splitters"""
         # Create feature components
         self.header = HeaderPanel()
+        self.auth_panel = AuthPanel()
         self.clipboard_panel = ClipboardPanel()
         self.enhance_prompt_panel = EnhancePromptPanel()
         self.generate_response_panel = GenerateResponsePanel()
@@ -79,6 +81,7 @@ class MainWindow(QMainWindow):
         # Store panels for settings management
         self.panels = {
             'Header Panel': self.header,
+            'Authentication': self.auth_panel,
             'Clipboard History': self.clipboard_panel,
             'Notes': self.notes_panel,
             'AI Prompt Enhancement': self.enhance_prompt_panel,
@@ -87,6 +90,7 @@ class MainWindow(QMainWindow):
         
         # Store feature name mappings for visibility
         self.feature_visibility_mapping = {
+            'Authentication': 'authentication',
             'Clipboard History': 'clipboard_history',
             'Notes': 'notes',
             'AI Prompt Enhancement': 'ai_prompt_enhancement',
@@ -118,6 +122,10 @@ class MainWindow(QMainWindow):
         # Generate Response connections
         self.generate_response_panel.response_generated.connect(self.on_response_generated)
         self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
+        
+        # Authentication connections
+        self.auth_panel.auth_success.connect(self.on_auth_success)
+        self.auth_panel.auth_failed.connect(self.on_auth_failed)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -261,6 +269,14 @@ class MainWindow(QMainWindow):
         """Handle generate response error event"""
         print(f"Generate response error: {error_message}")
         
+    def on_auth_success(self, token_data):
+        """Handle authentication success event"""
+        print(f"Authentication successful for user: {token_data.get('user_id', 'Unknown')}")
+        
+    def on_auth_failed(self, error_message):
+        """Handle authentication failure event"""
+        print(f"Authentication failed: {error_message}")
+        
     def closeEvent(self, event):
         """Handle application close event"""
         try:
@@ -284,6 +300,7 @@ class MainWindow(QMainWindow):
         """Get default settings for the main window"""
         return {
             'feature_order': [
+                'Authentication',
                 'Clipboard History',
                 'Notes',
                 'AI Prompt Enhancement',
@@ -293,6 +310,7 @@ class MainWindow(QMainWindow):
             'features_per_column': 2,
             'visibility': {
                 'header': True,  # Header is always visible
+                'authentication': True,
                 'clipboard_history': True,
                 'notes': True,
                 'ai_prompt_enhancement': True,

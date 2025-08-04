@@ -10,6 +10,7 @@ import threading
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +57,7 @@ class DatabaseConnection:
             self._create_notes_table(connection)
             self._create_clipboard_history_table(connection)
             self._create_settings_table(connection)
+            self._create_users_table(connection)
             logger.info(f"Database initialized successfully: {self.db_path}")
             
         except Exception as e:
@@ -123,6 +125,31 @@ class DatabaseConnection:
             logger.info("Settings table created/verified successfully")
         except Exception as e:
             logger.error(f"Failed to create settings table: {e}")
+            raise
+    
+    def _create_users_table(self, connection: sqlite3.Connection):
+        """Create the users table if it doesn't exist"""
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT UNIQUE NOT NULL,
+            email TEXT NOT NULL,
+            name TEXT,
+            access_token TEXT,
+            refresh_token TEXT,
+            token_expiry INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        
+        try:
+            cursor = connection.cursor()
+            cursor.execute(create_table_sql)
+            connection.commit()
+            logger.info("Users table created/verified successfully")
+        except Exception as e:
+            logger.error(f"Failed to create users table: {e}")
             raise
     
     def get_connection(self) -> sqlite3.Connection:
@@ -295,6 +322,92 @@ class DatabaseConnection:
                     'ai_smart_response': False
                 }
             }
+
+    def save_user_info(self, user_id: str, email: str, name: str, access_token: str = None, 
+                      refresh_token: str = None, token_expiry: int = None):
+        """Save user information to the database (clears existing users first)"""
+        try:
+            # Clear all existing users first (ensure only one user at a time)
+            self.clear_all_users()
+            
+            # Now save the new user
+            query = """
+            INSERT INTO users 
+            (user_id, email, name, access_token, refresh_token, token_expiry, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """
+            self.execute_query(query, (user_id, email, name, access_token, refresh_token, token_expiry))
+            logger.info(f"User info saved: {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to save user info {user_id}: {e}")
+            raise
+
+    def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user information from the database"""
+        query = "SELECT * FROM users WHERE user_id = ?"
+        try:
+            results = self.execute_query(query, (user_id,))
+            if results:
+                return results[0]
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get user info {user_id}: {e}")
+            return None
+
+    def update_user_tokens(self, user_id: str, access_token: str = None, 
+                          refresh_token: str = None, token_expiry: int = None):
+        """Update user tokens in the database"""
+        query = """
+        UPDATE users 
+        SET access_token = ?, refresh_token = ?, token_expiry = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+        """
+        try:
+            self.execute_query(query, (access_token, refresh_token, token_expiry, user_id))
+            logger.info(f"User tokens updated: {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to update user tokens {user_id}: {e}")
+            raise
+
+    def delete_user_info(self, user_id: str):
+        """Delete user information from the database"""
+        query = "DELETE FROM users WHERE user_id = ?"
+        try:
+            self.execute_query(query, (user_id,))
+            logger.info(f"User info deleted: {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to delete user info {user_id}: {e}")
+            raise
+
+    def clear_all_users(self):
+        """Clear all users from the database (for logout)"""
+        query = "DELETE FROM users"
+        try:
+            self.execute_query(query)
+            logger.info("All users cleared from database")
+        except Exception as e:
+            logger.error(f"Failed to clear all users: {e}")
+            raise
+
+    def get_current_authenticated_user(self) -> Optional[Dict[str, Any]]:
+        """Get the currently authenticated user (user with valid tokens)"""
+        query = """
+        SELECT * FROM users 
+        WHERE access_token IS NOT NULL 
+        AND refresh_token IS NOT NULL 
+        AND (token_expiry IS NULL OR token_expiry > ?)
+        ORDER BY updated_at DESC 
+        LIMIT 1
+        """
+        try:
+            current_time = int(time.time())
+            results = self.execute_query(query, (current_time,))
+            if results:
+                return results[0]
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get current authenticated user: {e}")
+            return None
 
 
 # Global database instance

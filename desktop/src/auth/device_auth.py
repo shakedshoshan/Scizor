@@ -17,6 +17,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 from PyQt6.QtCore import QObject, pyqtSignal
 from pathlib import Path
+import jwt
+from database.db_connection import get_database
 
 
 class AuthCallbackHandler(BaseHTTPRequestHandler):
@@ -138,6 +140,7 @@ class DeviceAuthManager(QObject):
         self.redirect_uri = "http://localhost:8080/callback"
         self.auth_server_url = "http://localhost:3000"  # Your website URL
         self.backend_url = "http://localhost:5000"  # Your backend URL
+        self.jwt_secret = "your-secret-key"  # Should match backend JWT secret
         
         # PKCE parameters
         self.code_verifier = None
@@ -152,9 +155,120 @@ class DeviceAuthManager(QObject):
         self.tokens_file = self._get_tokens_file_path()
         self._load_tokens()
         
+        # Database connection
+        self.db = get_database()
+        
         # Connect signals
         self.auth_code_received.connect(self._exchange_code_for_tokens)
         self.auth_error.connect(self._handle_auth_error)
+
+    def verify_consent_token(self, consent_token: str) -> Optional[Dict[str, Any]]:
+        """Verify and decode JWT consent token"""
+        try:
+            # Decode the JWT token without verification for now
+            # In production, you should verify the signature
+            decoded = jwt.decode(consent_token, self.jwt_secret, algorithms=['HS256'])
+            
+            if decoded.get('type') != 'consent':
+                raise ValueError('Invalid token type')
+            
+            return decoded
+        except Exception as e:
+            print(f"Error verifying consent token: {e}")
+            return None
+
+    def process_consent_token(self, consent_token: str) -> bool:
+        """Process JWT consent token and store user information"""
+        try:
+            # Verify and decode the consent token
+            decoded = self.verify_consent_token(consent_token)
+            if not decoded:
+                self.auth_error.emit("Invalid consent token")
+                return False
+            
+            # Extract user information
+            user_id = decoded.get('userId')
+            user_email = decoded.get('userEmail')
+            user_name = decoded.get('userName')
+            
+            if not user_id or not user_email:
+                self.auth_error.emit("Invalid user information in consent token")
+                return False
+            
+            # Store user information in database
+            self.db.save_user_info(
+                user_id=user_id,
+                email=user_email,
+                name=user_name
+            )
+            
+            print(f"✅ User information stored: {user_id} ({user_email})")
+            
+            # Now exchange the consent token for access tokens
+            return self._exchange_consent_token_for_tokens(consent_token)
+            
+        except Exception as e:
+            error_msg = f"Error processing consent token: {str(e)}"
+            self.auth_error.emit(error_msg)
+            return False
+
+    def _exchange_consent_token_for_tokens(self, consent_token: str) -> bool:
+        """Exchange consent token for access tokens"""
+        try:
+            # Make request to backend to exchange consent token for tokens
+            exchange_data = {
+                'consent_token': consent_token,
+                'code_verifier': self.code_verifier,
+                'redirect_uri': self.redirect_uri
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/auth/device/token",
+                json=exchange_data,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                
+                if token_data.get('success'):
+                    # Store tokens
+                    self.access_token = token_data['data']['access_token']
+                    self.refresh_token = token_data['data']['refresh_token']
+                    self.user_id = token_data['data']['user_id']
+                    self.token_expiry = token_data['data']['expires_in']
+                    
+                    # Update user tokens in database
+                    self.db.update_user_tokens(
+                        user_id=self.user_id,
+                        access_token=self.access_token,
+                        refresh_token=self.refresh_token,
+                        token_expiry=self.token_expiry
+                    )
+                    
+                    # Save tokens to file
+                    self._save_tokens()
+                    
+                    # Emit success signal
+                    self.token_received.emit(token_data['data'])
+                    self.auth_completed.emit(True)
+                    return True
+                else:
+                    error_msg = token_data.get('message', 'Token exchange failed')
+                    self.token_error.emit(error_msg)
+                    self.auth_completed.emit(False)
+                    return False
+            else:
+                error_msg = f"Token exchange failed: {response.status_code}"
+                self.token_error.emit(error_msg)
+                self.auth_completed.emit(False)
+                return False
+                
+        except Exception as e:
+            error_msg = f"Error exchanging consent token for tokens: {str(e)}"
+            self.token_error.emit(error_msg)
+            self.auth_completed.emit(False)
+            return False
     
     def _get_tokens_file_path(self) -> Path:
         """Get the path for storing tokens securely"""
@@ -361,6 +475,24 @@ class DeviceAuthManager(QObject):
             self.token_error.emit(error_msg)
             self.auth_completed.emit(False)
             return False
+
+    def exchange_token_or_code(self, token_or_code: str):
+        """Exchange either a consent token or authorization code for tokens"""
+        try:
+            # First, try to verify if it's a JWT consent token
+            decoded = self.verify_consent_token(token_or_code)
+            if decoded:
+                # It's a valid consent token, process it
+                return self.process_consent_token(token_or_code)
+            else:
+                # Try as legacy authorization code
+                return self.exchange_authorization_code(token_or_code)
+                
+        except Exception as e:
+            error_msg = f"Error processing token/code: {str(e)}"
+            self.token_error.emit(error_msg)
+            self.auth_completed.emit(False)
+            return False
     
     def _handle_auth_error(self, error: str):
         """Handle authentication errors"""
@@ -431,6 +563,7 @@ class DeviceAuthManager(QObject):
     
     def logout(self):
         """Logout and clear stored tokens"""
+        # Clear local tokens
         self.access_token = None
         self.refresh_token = None
         self.user_id = None
@@ -439,6 +572,13 @@ class DeviceAuthManager(QObject):
         # Remove tokens file
         if self.tokens_file.exists():
             self.tokens_file.unlink()
+        
+        # Clear all users from database (ensure only one user can be authenticated)
+        try:
+            self.db.execute_query("DELETE FROM users")
+            print("✅ All users cleared from database")
+        except Exception as e:
+            print(f"Error clearing users from database: {e}")
         
         # Stop local server if running
         # self._stop_local_server() # This line is removed as per the new_code

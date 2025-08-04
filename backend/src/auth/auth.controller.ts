@@ -30,6 +30,37 @@ export class AuthController {
   ) {}
 
   /**
+   * POST /auth/consent-token
+   * Generate JWT consent token for device flow
+   */
+  @Post('consent-token')
+  @HttpCode(HttpStatus.OK)
+  async generateConsentToken(@Body() body: { userId: string; userEmail: string; userName?: string }) {
+    try {
+      const consentToken = this.authService.generateConsentToken(
+        body.userId,
+        body.userEmail,
+        body.userName
+      );
+      
+      return {
+        success: true,
+        message: 'Consent token generated successfully',
+        data: {
+          consent_token: consentToken,
+          expires_in: 600 // 10 minutes in seconds
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  /**
    * POST /auth/text
    * Create a new text document in Firestore
    */

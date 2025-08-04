@@ -24,4 +24,8 @@ __all__ = [
     'get_hotkey_manager',
     'start_hotkey_manager',
     'stop_hotkey_manager',
+    'DeviceAuthManager',
+    'get_device_auth_manager',
+    'start_device_auth_manager',
+    'stop_device_auth_manager',
 ] 

@@ -2,8 +2,12 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class DeviceTokenExchangeDto {
   @IsString()
-  @IsNotEmpty()
-  authorization_code: string;
+  @IsOptional()
+  authorization_code?: string;
+
+  @IsString()
+  @IsOptional()
+  consent_token?: string;
 
   @IsString()
   @IsNotEmpty()

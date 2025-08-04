@@ -37,12 +37,14 @@ class GenerateResponseService:
     def generate_response(
         self, 
         content: str, 
+        user_id: str,
     ) -> Dict[str, Any]:
         """
         Generate an AI response using the backend AI API
         
         Args:
             content: The content to generate a response for
+            user_id: The user ID for the request
             
         Returns:
             Dictionary containing the generated response and metadata
@@ -54,9 +56,13 @@ class GenerateResponseService:
         if not content or not content.strip():
             raise ValueError("content cannot be empty")
             
+        if not user_id or not user_id.strip():
+            raise ValueError("User ID cannot be empty")
+            
         # Prepare request payload
         payload = {
             "content": content.strip(),
+            "user_id": user_id.strip(),
         }
             
         try:
@@ -133,17 +139,24 @@ def get_generate_response_service(base_url: str = "http://localhost:5000") -> Ge
 
 def generate_response(
     prompt: str, 
-    base_url: str = "http://localhost:5000"
+    user_id: str,
+    base_url: str = "http://localhost:5000",
+
 ) -> Dict[str, Any]:
     """
     Convenience function to generate an AI response
     
     Args:
-        prompt: The prompt to generate a response for
+        content: The content to generate a response for
+        user_id: The user ID for the request
         base_url: Base URL for the backend API
+
         
     Returns:
         Dictionary containing the generated response and metadata
     """
     service = get_generate_response_service(base_url)
-    return service.generate_response(prompt) 
+    return service.generate_response(
+        prompt, 
+        user_id, 
+    ) 

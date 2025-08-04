@@ -27,37 +27,90 @@ export class AuthService {
   private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
   private readonly JWT_EXPIRES_IN = '1h';
   private readonly REFRESH_TOKEN_EXPIRES_IN = '7d';
+  private readonly CONSENT_TOKEN_EXPIRES_IN = '10m'; // 10 minutes for consent tokens
+
+  /**
+   * Generate JWT consent token for device flow
+   */
+  generateConsentToken(userId: string, userEmail: string, userName?: string): string {
+    const payload = {
+      userId,
+      userEmail,
+      userName: userName || userEmail.split('@')[0], // Use email prefix as default name
+      type: 'consent',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (10 * 60) // 10 minutes
+    };
+    
+    return jwt.sign(payload, this.JWT_SECRET);
+  }
+
+  /**
+   * Verify and decode JWT consent token
+   */
+  verifyConsentToken(token: string): any {
+    try {
+      const decoded = jwt.verify(token, this.JWT_SECRET) as any;
+      if (decoded.type !== 'consent') {
+        throw new Error('Invalid token type');
+      }
+      return decoded;
+    } catch (error) {
+      throw new Error('Invalid consent token');
+    }
+  }
 
   /**
    * Exchange authorization code for tokens (device flow)
    */
   async exchangeDeviceToken(deviceTokenDto: DeviceTokenExchangeDto): Promise<DeviceTokenResponseDto> {
     try {
-      // In a real implementation, you would:
-      // 1. Validate the authorization code against your stored codes
-      // 2. Verify the code_verifier matches the code_challenge
-      // 3. Extract user information from the authorization code
-      // 4. Generate access and refresh tokens
-      
-      // For now, we'll simulate the token exchange
-      const userId = this.extractUserIdFromAuthCode(deviceTokenDto.authorization_code);
-      
-      if (!userId) {
-        throw new Error('Invalid authorization code');
+      // Check if this is a consent token or authorization code
+      if (deviceTokenDto.consent_token) {
+        // Handle JWT consent token
+        const decoded = this.verifyConsentToken(deviceTokenDto.consent_token);
+        
+        if (!decoded) {
+          throw new Error('Invalid consent token');
+        }
+
+        const userId = decoded.userId;
+        
+        // Generate tokens
+        const accessToken = this.generateAccessToken(userId);
+        const refreshToken = this.generateRefreshToken(userId);
+        const expiresIn = this.getTokenExpiryTime();
+
+        return {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          user_id: userId,
+          expires_in: expiresIn,
+          token_type: 'Bearer'
+        };
+      } else if (deviceTokenDto.authorization_code) {
+        // Handle legacy authorization code (for backward compatibility)
+        const userId = this.extractUserIdFromAuthCode(deviceTokenDto.authorization_code);
+        
+        if (!userId) {
+          throw new Error('Invalid authorization code');
+        }
+
+        // Generate tokens
+        const accessToken = this.generateAccessToken(userId);
+        const refreshToken = this.generateRefreshToken(userId);
+        const expiresIn = this.getTokenExpiryTime();
+
+        return {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          user_id: userId,
+          expires_in: expiresIn,
+          token_type: 'Bearer'
+        };
+      } else {
+        throw new Error('No consent token or authorization code provided');
       }
-
-      // Generate tokens
-      const accessToken = this.generateAccessToken(userId);
-      const refreshToken = this.generateRefreshToken(userId);
-      const expiresIn = this.getTokenExpiryTime();
-
-      return {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        user_id: userId,
-        expires_in: expiresIn,
-        token_type: 'Bearer'
-      };
     } catch (error) {
       throw new Error(`Token exchange failed: ${error.message}`);
     }

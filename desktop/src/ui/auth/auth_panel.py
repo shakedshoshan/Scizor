@@ -100,13 +100,13 @@ class AuthPanel(QWidget):
         auth_code_layout.setSpacing(8)
         
         # Auth code label
-        auth_code_label = QLabel("Enter Authorization Code:")
+        auth_code_label = QLabel("Enter Token:")
         auth_code_label.setStyleSheet("color: #374151; font-size: 12px; font-weight: bold;")
         auth_code_layout.addWidget(auth_code_label)
         
         # Auth code input
         self.auth_code_input = QLineEdit()
-        self.auth_code_input.setPlaceholderText("Paste the authorization code here...")
+        self.auth_code_input.setPlaceholderText("Paste the token from the website here...")
         self.auth_code_input.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
@@ -121,7 +121,7 @@ class AuthPanel(QWidget):
         auth_code_layout.addWidget(self.auth_code_input)
         
         # Exchange button
-        self.exchange_btn = QPushButton("🔐 Exchange Code")
+        self.exchange_btn = QPushButton("🔐 Exchange Token")
         self.exchange_btn.setStyleSheet("""
             QPushButton {
                 background-color: #10B981;
@@ -232,20 +232,20 @@ class AuthPanel(QWidget):
         self.auth_manager.auth_completed.connect(self.on_auth_completed)
     
     def exchange_auth_code(self):
-        """Exchange the manually entered authorization code"""
-        auth_code = self.auth_code_input.text().strip()
-        if not auth_code:
+        """Exchange the manually entered token"""
+        token = self.auth_code_input.text().strip()
+        if not token:
             QMessageBox.warning(
                 self,
-                "Authorization Code Required",
-                "Please enter the authorization code from the website.",
+                "Token Required",
+                "Please enter the token from the website.",
                 QMessageBox.StandardButton.Ok
             )
             return
         
         self.exchange_btn.setEnabled(False)
         self.progress_bar.setVisible(True)
-        self.status_label.setText("Exchanging authorization code for tokens...")
+        self.status_label.setText("Processing token...")
         
         # Update panel styling for loading state
         self.setStyleSheet("""
@@ -256,16 +256,16 @@ class AuthPanel(QWidget):
             }
         """)
         
-        # Exchange the code
-        success = self.auth_manager.exchange_authorization_code(auth_code)
+        # Process the token
+        success = self.auth_manager.exchange_token_or_code(token)
         if not success:
-            self.on_token_error("Failed to exchange authorization code")
+            self.on_token_error("Failed to process token")
     
     def show_auth_code_input(self):
-        """Show the authorization code input"""
+        """Show the token input"""
         self.sign_in_btn.setVisible(False)
         self.auth_code_frame.setVisible(True)
-        self.status_label.setText("Please enter the authorization code from the website")
+        self.status_label.setText("Please enter the token from the website")
         
         # Update panel styling for waiting state
         self.setStyleSheet("""
@@ -311,12 +311,27 @@ class AuthPanel(QWidget):
         self.progress_bar.setVisible(False)
         self.user_frame.setVisible(True)
         
-        # Get user info
-        user_info = self.auth_manager.get_user_info()
-        if user_info:
-            email = user_info.get('email', 'Unknown')
-            self.user_info_label.setText(f"✅ Signed in as: {email}")
-        else:
+        # Get user info from database
+        try:
+            from database.db_connection import get_database
+            db = get_database()
+            user_info = db.get_current_authenticated_user()
+            
+            if user_info:
+                email = user_info.get('email', 'Unknown')
+                name = user_info.get('name', 'Unknown')
+                display_name = name if name and name != 'Unknown' else email
+                self.user_info_label.setText(f"✅ Signed in as: {display_name}")
+            else:
+                # Fallback to auth manager
+                user_info = self.auth_manager.get_user_info()
+                if user_info:
+                    email = user_info.get('email', 'Unknown')
+                    self.user_info_label.setText(f"✅ Signed in as: {email}")
+                else:
+                    self.user_info_label.setText("✅ Signed in successfully")
+        except Exception as e:
+            print(f"Error getting user info: {e}")
             self.user_info_label.setText("✅ Signed in successfully")
         
         self.status_label.setText("")
@@ -418,9 +433,25 @@ class AuthPanel(QWidget):
     
     def logout(self):
         """Logout the user"""
-        self.auth_manager.logout()
-        self.show_unauthenticated_state()
-        self.auth_failed.emit("User logged out")
+        try:
+            # Logout from auth manager (this will clear database too)
+            self.auth_manager.logout()
+            
+            # Clear the auth code input
+            self.auth_code_input.clear()
+            
+            # Show unauthenticated state
+            self.show_unauthenticated_state()
+            
+            # Emit logout signal
+            self.auth_failed.emit("User logged out")
+            
+            print("✅ User logged out successfully")
+            
+        except Exception as e:
+            print(f"Error during logout: {e}")
+            # Still show unauthenticated state even if there's an error
+            self.show_unauthenticated_state()
     
     def is_authenticated(self) -> bool:
         """Check if user is authenticated"""

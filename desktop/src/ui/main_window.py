@@ -12,7 +12,6 @@ from PyQt6.QtGui import QAction
 from .features.desktop import (
     HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel, GenerateResponsePanel
 )
-from .auth.auth_panel import AuthPanel
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 
@@ -62,7 +61,6 @@ class MainWindow(QMainWindow):
         """Setup the main layout with modular feature components using splitters"""
         # Create feature components
         self.header = HeaderPanel()
-        self.auth_panel = AuthPanel()  # Always create auth panel
         self.clipboard_panel = ClipboardPanel()
         self.enhance_prompt_panel = EnhancePromptPanel()
         self.generate_response_panel = GenerateResponsePanel()
@@ -72,9 +70,8 @@ class MainWindow(QMainWindow):
         self.main_splitter = QSplitter(Qt.Orientation.Vertical)
         self.main_splitter.setChildrenCollapsible(False)  # Prevent panels from being collapsed to zero size
         
-        # Add header and auth panel to main splitter (auth is always at top)
+        # Add header to main splitter
         self.main_splitter.addWidget(self.header)
-        self.main_splitter.addWidget(self.auth_panel)  # Always add auth panel second (after header)
         self.main_layout.addWidget(self.main_splitter)
         
         # Main splitter is already stored as self.main_splitter
@@ -82,7 +79,6 @@ class MainWindow(QMainWindow):
         # Store panels for settings management
         self.panels = {
             'Header Panel': self.header,
-            'Authentication': self.auth_panel,
             'Clipboard History': self.clipboard_panel,
             'Notes': self.notes_panel,
             'AI Prompt Enhancement': self.enhance_prompt_panel,
@@ -91,17 +87,11 @@ class MainWindow(QMainWindow):
         
         # Store feature name mappings for visibility
         self.feature_visibility_mapping = {
-            'Authentication': 'authentication',
             'Clipboard History': 'clipboard_history',
             'Notes': 'notes',
             'AI Prompt Enhancement': 'ai_prompt_enhancement',
             'AI Smart Response': 'ai_smart_response'
         }
-        
-        # Ensure auth panel is visible
-        self.auth_panel.setVisible(True)
-        self.auth_panel.show()
-        print("🔐 Authentication panel created and made visible")
         
     def setup_connections(self):
         """Setup signal connections between feature components"""
@@ -128,10 +118,6 @@ class MainWindow(QMainWindow):
         # Generate Response connections
         self.generate_response_panel.response_generated.connect(self.on_response_generated)
         self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
-        
-        # Authentication connections
-        self.auth_panel.auth_success.connect(self.on_auth_success)
-        self.auth_panel.auth_failed.connect(self.on_auth_failed)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -275,18 +261,6 @@ class MainWindow(QMainWindow):
         """Handle generate response error event"""
         print(f"Generate response error: {error_message}")
         
-    def on_auth_success(self, token_data):
-        """Handle authentication success event"""
-        print(f"Authentication successful for user: {token_data.get('user_id', 'Unknown')}")
-        # Update the auth panel to show authenticated state
-        self.auth_panel.show_authenticated_state()
-        
-    def on_auth_failed(self, error_message):
-        """Handle authentication failure event"""
-        print(f"Authentication failed: {error_message}")
-        # Update the auth panel to show unauthenticated state
-        self.auth_panel.show_unauthenticated_state()
-        
     def closeEvent(self, event):
         """Handle application close event"""
         try:
@@ -310,7 +284,6 @@ class MainWindow(QMainWindow):
         """Get default settings for the main window"""
         return {
             'feature_order': [
-                'Authentication',  # Always first
                 'Clipboard History',
                 'Notes',
                 'AI Prompt Enhancement',
@@ -320,7 +293,6 @@ class MainWindow(QMainWindow):
             'features_per_column': 2,
             'visibility': {
                 'header': True,  # Header is always visible
-                'authentication': True,  # Authentication is always visible
                 'clipboard_history': True,
                 'notes': True,
                 'ai_prompt_enhancement': True,
@@ -365,12 +337,12 @@ class MainWindow(QMainWindow):
         
     def rebuild_layout(self):
         """Rebuild the layout based on current settings"""
-        # Clear existing layout - but keep the header and auth panel
-        # Remove all widgets except header and auth from main splitter
+        # Clear existing layout - but keep the header
+        # Remove all widgets except header from main splitter
         widgets_to_remove = []
         for i in range(self.main_splitter.count()):
             widget = self.main_splitter.widget(i)
-            if widget != self.header and widget != self.auth_panel:
+            if widget != self.header:
                 widgets_to_remove.append(widget)
         
         # Remove widgets safely
@@ -378,32 +350,20 @@ class MainWindow(QMainWindow):
             if widget:
                 widget.setParent(None)
         
-        # Ensure auth panel is at the top (after header)
-        if self.auth_panel not in [self.main_splitter.widget(i) for i in range(self.main_splitter.count())]:
-            print("🔐 Adding authentication panel at the top")
-            # Insert auth panel after header (at index 1)
-            self.main_splitter.insertWidget(1, self.auth_panel)
-        
-        self.auth_panel.setVisible(True)
-        self.auth_panel.show()
-        
-        # Get visible features in order (excluding header and authentication)
+        # Get visible features in order
         visible_features = []
         for feature_name in self.current_settings['feature_order']:
-            # Skip authentication as it's always at the top
-            if feature_name == 'Authentication':
-                continue
             # Map feature names to visibility keys using the mapping
             visibility_key = self.feature_visibility_mapping.get(feature_name, feature_name.lower().replace(' ', '_'))
             if self.current_settings['visibility'].get(visibility_key, True):
                 visible_features.append(feature_name)
         
         # Debug: Print what features are visible
-        print(f"Visible features (excluding auth): {visible_features}")
+        print(f"Visible features: {visible_features}")
         print(f"Available panels: {list(self.panels.keys())}")
                 
         if not visible_features:
-            print("No other visible features found!")
+            print("No visible features found!")
             return
             
         # Rebuild layout based on settings
@@ -457,21 +417,20 @@ class MainWindow(QMainWindow):
             column_widths = [self.width() // columns] * columns
             columns_splitter.setSizes(column_widths)
                 
-        # Set splitter sizes - header gets smaller size, auth gets medium size
+        # Set splitter sizes - header gets smaller size
         if self.main_splitter.count() > 0:
             total_height = self.height()
             header_height = 60  # Fixed header height
-            auth_height = 200   # Fixed auth panel height
-            remaining_height = total_height - header_height - auth_height
-            remaining_panels = self.main_splitter.count() - 2  # Exclude header and auth
+            remaining_height = total_height - header_height
+            remaining_panels = self.main_splitter.count() - 1  # Exclude header
             
             if remaining_panels > 0:
                 panel_height = remaining_height // remaining_panels
-                sizes = [header_height, auth_height] + [panel_height] * remaining_panels
+                sizes = [header_height] + [panel_height] * remaining_panels
                 self.main_splitter.setSizes(sizes)
             else:
-                # Only header and auth
-                sizes = [header_height, auth_height]
+                # Only header
+                sizes = [header_height]
                 self.main_splitter.setSizes(sizes)
                 
         # Debug: Print final layout info

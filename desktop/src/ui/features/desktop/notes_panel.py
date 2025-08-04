@@ -27,6 +27,7 @@ class NoteCard(QFrame):
         super().__init__(parent)
         self.note_data = note_data
         self.notes_panel = notes_panel
+        self.is_expanded = False
         self.setup_ui()
         self.setup_connections()
         
@@ -34,8 +35,8 @@ class NoteCard(QFrame):
         """Setup the note card UI"""
         self.setFrameStyle(QFrame.Shape.StyledPanel)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setMinimumHeight(120)
-        self.setMaximumHeight(180)
+        self.setMinimumHeight(100)  # Reduced from 120
+        self.setMaximumHeight(160)  # Reduced from 180
         
         # Card styling to match the image
         self.setStyleSheet("""
@@ -43,13 +44,13 @@ class NoteCard(QFrame):
                 background-color: white;
                 border: none;
                 border-radius: 8px;
-                margin: 4px;
+                margin: 2px;  /* Reduced from 4px */
             }
         """)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(12, 12, 12, 12)  # Reduced from 16, 16, 16, 16
+        layout.setSpacing(6)  # Reduced from 8
         
         # Header with title and priority
         header_layout = QHBoxLayout()
@@ -82,14 +83,40 @@ class NoteCard(QFrame):
         
         # Full content (not truncated)
         content = self.note_data.get('content', '')
-        content_label = QLabel(content)
-        content_label.setWordWrap(True)
-        content_label.setStyleSheet("""
+        self.content_label = QLabel(content)
+        self.content_label.setWordWrap(True)
+        self.content_label.setStyleSheet("""
             color: #34495e;
-            font-size: 11px;
-            line-height: 1.4;
-            padding: 4px 0;
+            font-size: 11px;  /* Increased from 10px */
+            line-height: 1.3;  /* Reduced from 1.4 */
+            padding: 2px 0;  /* Reduced from 4px 0 */
         """)
+        
+        # Check if content is long and needs truncation
+        self.is_content_long = len(content) > 100  # Reduced threshold to show more content
+        if self.is_content_long:
+            # Truncate content for collapsed view - show more content
+            truncated_content = content[:100] + "..."
+            self.content_label.setText(truncated_content)
+            
+            # Add "View All" button - smaller and without background
+            self.view_all_btn = QPushButton("View All")
+            self.view_all_btn.setFixedSize(40, 14)  # Smaller size
+            self.view_all_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #007acc;
+                    border: none;
+                    font-size: 8px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    color: #0056b3;
+                }
+            """)
+            self.view_all_btn.setVisible(True)
+        else:
+            self.view_all_btn = None
         
         # Metadata with both creation and update dates
         created_at = self.note_data.get('created_at', '')
@@ -113,14 +140,14 @@ class NoteCard(QFrame):
         left_buttons_layout = QHBoxLayout()
         
         edit_btn = QPushButton("Edit")
-        edit_btn.setFixedSize(50, 25)
+        edit_btn.setFixedSize(45, 22)  # Reduced from 50, 25
         edit_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                font-size: 10px;
+                border-radius: 3px;  /* Reduced from 4px */
+                font-size: 10px;  /* Reduced from 10px */
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -129,14 +156,14 @@ class NoteCard(QFrame):
         """)
         
         delete_btn = QPushButton("Del")
-        delete_btn.setFixedSize(40, 25)
+        delete_btn.setFixedSize(35, 22)  # Reduced from 40, 25
         delete_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                font-size: 10px;
+                border-radius: 3px;  /* Reduced from 4px */
+                font-size: 10px;  
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -150,14 +177,14 @@ class NoteCard(QFrame):
         
         # Right side button
         copy_btn = QPushButton("Copy")
-        copy_btn.setFixedSize(50, 25)
+        copy_btn.setFixedSize(45, 22)  # Reduced from 50, 25
         copy_btn.setStyleSheet("""
             QPushButton {
                 background-color: #9b59b6;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                font-size: 10px;
+                border-radius: 3px;  /* Reduced from 4px */
+                font-size: 10px;  
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -175,7 +202,15 @@ class NoteCard(QFrame):
         
         # Add all widgets to layout
         layout.addLayout(header_layout)
-        layout.addWidget(content_label, 1)
+        layout.addWidget(self.content_label, 1)
+        
+        # Add "View All" button if content is long
+        if self.is_content_long and self.view_all_btn:
+            view_all_layout = QHBoxLayout()
+            view_all_layout.addStretch()
+            view_all_layout.addWidget(self.view_all_btn)
+            layout.addLayout(view_all_layout)
+        
         layout.addWidget(metadata_label)
         layout.addLayout(actions_layout)
         
@@ -185,6 +220,33 @@ class NoteCard(QFrame):
         self.delete_btn.clicked.connect(lambda: self.notes_panel.delete_note(self.note_data['id']))
         self.copy_btn.clicked.connect(lambda: self.notes_panel.copy_note_content(self.note_data))
         
+        # Connect "View All" button if it exists
+        if self.view_all_btn:
+            self.view_all_btn.clicked.connect(self.toggle_expand)
+    
+    def toggle_expand(self):
+        """Toggle between expanded and collapsed view"""
+        if not self.is_content_long:
+            return
+            
+        if self.is_expanded:
+            # Collapse - show truncated content
+            truncated_content = self.note_data.get('content', '')[:100] + "..."
+            self.content_label.setText(truncated_content)
+            self.view_all_btn.setText("View All")
+            self.setMaximumHeight(160)
+            self.is_expanded = False
+        else:
+            # Expand - show full content
+            full_content = self.note_data.get('content', '')
+            self.content_label.setText(full_content)
+            self.view_all_btn.setText("Collapse")
+            self.setMaximumHeight(400)  # Allow more height for expanded view
+            self.is_expanded = True
+        
+        # Force layout update
+        self.updateGeometry()
+    
     def get_priority_color(self, priority):
         """Get color for priority tag - orange for priority 2 as shown in image"""
         colors = {
@@ -293,6 +355,11 @@ class NotesPanel(QGroupBox):
             'name': False,
             'time_created': False
         }
+        
+        # Set size policy to ensure minimum space
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setMinimumHeight(200)  # Ensure minimum height
+        
         self.setup_ui()
         self.setup_connections()
         self.load_notes()
@@ -304,8 +371,8 @@ class NotesPanel(QGroupBox):
                 font-weight: bold;
                 border: 1px solid #ccc;
                 border-radius: 4px;
-                margin-top: 8px;
-                padding-top: 8px;
+                margin-top: 6px;  /* Reduced from 8px */
+                padding-top: 6px;  /* Reduced from 8px */
                 background-color: #f8f9fa;
             }
             QGroupBox::title {
@@ -317,8 +384,8 @@ class NotesPanel(QGroupBox):
         """)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 16, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(6, 12, 6, 6)  # Reduced from 8, 16, 8, 8
+        layout.setSpacing(6)  # Reduced from 8
         
         # Header section
         header_layout = QHBoxLayout()
@@ -326,13 +393,13 @@ class NotesPanel(QGroupBox):
         # Search bar
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("Search notes...")
-        self.search_edit.setMinimumHeight(28)
+        self.search_edit.setMinimumHeight(24)  # Reduced from 28
         self.search_edit.setStyleSheet("""
             QLineEdit {
                 border: 1px solid #ccc;
                 border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 11px;
+                padding: 3px 6px;  /* Reduced from 4px 8px */
+                font-size: 11px;  
                 background-color: white;
             }
             QLineEdit:focus {
@@ -348,13 +415,13 @@ class NotesPanel(QGroupBox):
             "Name",
             "Time Created"
         ])
-        self.sort_combo.setMinimumHeight(28)
+        self.sort_combo.setMinimumHeight(24)  # Reduced from 28
         self.sort_combo.setStyleSheet("""
             QComboBox {
                 border: 1px solid #ccc;
                 border-radius: 4px;
-                padding: 4px;
-                font-size: 11px;
+                padding: 3px;  /* Reduced from 4px */
+                font-size: 11px;  
                 background-color: white;
                 min-width: 50px;
             }
@@ -370,15 +437,15 @@ class NotesPanel(QGroupBox):
         
         # Add button
         self.add_btn = QPushButton("+ Add Note")
-        self.add_btn.setMinimumHeight(28)
+        self.add_btn.setMinimumHeight(24)  # Reduced from 28
         self.add_btn.setStyleSheet("""
             QPushButton {
                 background-color: #28a745;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                padding: 4px 12px;
-                font-size: 11px;
+                padding: 3px 10px;  /* Reduced from 4px 12px */
+                font-size: 11px;  
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -419,8 +486,8 @@ class NotesPanel(QGroupBox):
         self.notes_container = QWidget()
         self.notes_layout = QVBoxLayout(self.notes_container)
         self.notes_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.notes_layout.setSpacing(3)
-        self.notes_layout.setContentsMargins(3, 3, 3, 3)
+        self.notes_layout.setSpacing(2)  # Reduced from 3
+        self.notes_layout.setContentsMargins(2, 2, 2, 2)  # Reduced from 3, 3, 3, 3
         
         self.scroll_area.setWidget(self.notes_container)
         

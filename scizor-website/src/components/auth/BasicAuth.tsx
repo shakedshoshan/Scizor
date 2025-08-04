@@ -3,29 +3,91 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import UserAvatar from '@/components/UserAvatar';
 import { useCreateUserToken } from '@/hooks/CreateNewUserToken';
 
 const BasicAuth: React.FC = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
+  const [authParams, setAuthParams] = useState<any>(null);
   
   const { createUserToken } = useCreateUserToken();
 
-  // Navigate to home page only after successful sign in
+  // Check if this is a device authentication flow
   useEffect(() => {
-    if (user && !loading && justSignedIn) {
+    const clientId = searchParams.get('client_id');
+    const redirectUri = searchParams.get('redirect_uri');
+    const codeChallenge = searchParams.get('code_challenge');
+    const codeChallengeMethod = searchParams.get('code_challenge_method');
+    const state = searchParams.get('state');
+    const scope = searchParams.get('scope');
+
+    console.log('🔍 BasicAuth Debug - URL Parameters:');
+    console.log('  client_id:', clientId);
+    console.log('  redirect_uri:', redirectUri);
+    console.log('  code_challenge:', codeChallenge);
+    console.log('  code_challenge_method:', codeChallengeMethod);
+    console.log('  state:', state);
+    console.log('  scope:', scope);
+
+    if (clientId && redirectUri && codeChallenge) {
+      setAuthParams({
+        clientId,
+        redirectUri,
+        codeChallenge,
+        codeChallengeMethod,
+        state,
+        scope
+      });
+      console.log('✅ Device authentication flow detected');
+    } else {
+      console.log('❌ Not a device authentication flow');
+    }
+  }, [searchParams]);
+
+  // Navigate to home page only after successful sign in (for regular auth)
+  useEffect(() => {
+    if (user && !loading && justSignedIn && !authParams) {
       router.push('/');
       setJustSignedIn(false);
     }
-  }, [user, loading, router, justSignedIn]);
+  }, [user, loading, router, justSignedIn, authParams]);
+
+  // Handle device authentication redirect
+  useEffect(() => {
+    if (user && !loading && justSignedIn && authParams) {
+      console.log('🔍 Device auth redirect triggered:', {
+        user: !!user,
+        loading,
+        justSignedIn,
+        authParams: !!authParams
+      });
+      
+      // Redirect to consent page for device authentication
+      const consentUrl = `/auth/device/consent?${new URLSearchParams({
+        client_id: authParams.clientId,
+        redirect_uri: authParams.redirectUri,
+        code_challenge: authParams.codeChallenge,
+        code_challenge_method: authParams.codeChallengeMethod,
+        state: authParams.state,
+        scope: authParams.scope,
+        user_id: user.uid,
+        email: user.email || ''
+      }).toString()}`;
+      
+      console.log('🔍 Redirecting to consent page:', consentUrl);
+      router.push(consentUrl);
+      setJustSignedIn(false);
+    }
+  }, [user, loading, router, justSignedIn, authParams]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +112,8 @@ const BasicAuth: React.FC = () => {
         }
       } else {
         // Sign in existing user
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        firebaseUser = userCredential.user;
       }
       
       setJustSignedIn(true);
@@ -140,8 +203,17 @@ const BasicAuth: React.FC = () => {
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
-        Sign In to Scizor
+        {authParams ? 'Sign In to Scizor Desktop' : 'Sign In to Scizor'}
       </h2>
+      
+      {authParams && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded">
+          <p className="text-sm">
+            <strong>Desktop App Authentication</strong><br/>
+            Complete authentication to authorize the Scizor desktop application.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">

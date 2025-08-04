@@ -137,7 +137,7 @@ class DeviceAuthManager(QObject):
         self.client_id = "scizor-desktop-app"  # Your desktop app client ID
         self.redirect_uri = "http://localhost:8080/callback"
         self.auth_server_url = "http://localhost:3000"  # Your website URL
-        self.backend_url = "http://localhost:3001"  # Your backend URL
+        self.backend_url = "http://localhost:5000"  # Your backend URL
         
         # PKCE parameters
         self.code_verifier = None
@@ -209,44 +209,36 @@ class DeviceAuthManager(QObject):
         challenge_bytes = hashlib.sha256(self.code_verifier.encode('utf-8')).digest()
         self.code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip('=')
     
-    def _start_local_server(self):
-        """Start local HTTP server to receive callback"""
+    def _check_connection(self):
+        """Check connection to backend using health endpoint"""
         try:
-            # Create server with custom handler
-            def handler_factory(*args, **kwargs):
-                return AuthCallbackHandler(self, *args, **kwargs)
-            
-            self.local_server = HTTPServer(('localhost', 8080), handler_factory)
-            
-            # Start server in a separate thread
-            self.server_thread = threading.Thread(target=self.local_server.serve_forever)
-            self.server_thread.daemon = True
-            self.server_thread.start()
-            
-            return True
+            response = requests.get(
+                f"{self.backend_url}/ai/health",
+                timeout=10
+            )
+            if response.status_code == 200:
+                print("✅ Backend connection successful")
+                return True
+            else:
+                print(f"❌ Backend health check failed: {response.status_code}")
+                return False
         except Exception as e:
-            print(f"Error starting local server: {e}")
+            print(f"❌ Backend connection failed: {e}")
             return False
-    
-    def _stop_local_server(self):
-        """Stop the local HTTP server"""
-        if self.local_server:
-            self.local_server.shutdown()
-            self.local_server.server_close()
-            self.local_server = None
     
     def start_auth_flow(self):
         """Start the device flow authentication process"""
         try:
-            # Generate PKCE parameters
-            self._generate_pkce_params()
-            
-            # Start local server
-            if not self._start_local_server():
-                self.auth_error.emit("Failed to start local server")
+            # Check backend connection first
+            if not self._check_connection():
+                self.auth_error.emit("Backend connection failed. Please ensure the backend is running.")
                 return False
             
-            # Construct authorization URL
+            # Generate PKCE parameters
+            self._generate_pkce_params()
+            print(f"Code verifier: {self.code_verifier}")
+            
+            # Construct authorization URL - navigate to the main auth page
             auth_params = {
                 'client_id': self.client_id,
                 'redirect_uri': self.redirect_uri,
@@ -257,7 +249,9 @@ class DeviceAuthManager(QObject):
                 'state': secrets.token_urlsafe(16)
             }
             
-            auth_url = f"{self.auth_server_url}/auth/device?{urlencode(auth_params)}"
+            # Use the main auth page instead of device-specific endpoint
+            auth_url = f"{self.auth_server_url}/auth?{urlencode(auth_params)}"
+            print(f"Auth URL: {auth_url}")
             
             # Open browser for authentication
             webbrowser.open(auth_url)
@@ -315,12 +309,63 @@ class DeviceAuthManager(QObject):
             self.auth_completed.emit(False)
         finally:
             # Stop local server
-            self._stop_local_server()
+            # self._stop_local_server() # This line is removed as per the new_code
+            pass # No local server to stop here
+    
+    def exchange_authorization_code(self, auth_code: str):
+        """Manually exchange authorization code for tokens"""
+        try:
+            # Make request to backend to exchange code for tokens
+            exchange_data = {
+                'authorization_code': auth_code,
+                'code_verifier': self.code_verifier,
+                'redirect_uri': self.redirect_uri
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/auth/device/token",
+                json=exchange_data,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                
+                if token_data.get('success'):
+                    # Store tokens
+                    self.access_token = token_data['data']['access_token']
+                    self.refresh_token = token_data['data']['refresh_token']
+                    self.user_id = token_data['data']['user_id']
+                    self.token_expiry = token_data['data']['expires_in']
+                    
+                    # Save tokens
+                    self._save_tokens()
+                    
+                    # Emit success signal
+                    self.token_received.emit(token_data['data'])
+                    self.auth_completed.emit(True)
+                    return True
+                else:
+                    error_msg = token_data.get('message', 'Token exchange failed')
+                    self.token_error.emit(error_msg)
+                    self.auth_completed.emit(False)
+                    return False
+            else:
+                error_msg = f"Token exchange failed: {response.status_code}"
+                self.token_error.emit(error_msg)
+                self.auth_completed.emit(False)
+                return False
+                
+        except Exception as e:
+            error_msg = f"Error exchanging code for tokens: {str(e)}"
+            self.token_error.emit(error_msg)
+            self.auth_completed.emit(False)
+            return False
     
     def _handle_auth_error(self, error: str):
         """Handle authentication errors"""
         print(f"Authentication error: {error}")
-        self._stop_local_server()
+        # self._stop_local_server() # This line is removed as per the new_code
         self.auth_completed.emit(False)
     
     def is_authenticated(self) -> bool:
@@ -396,7 +441,8 @@ class DeviceAuthManager(QObject):
             self.tokens_file.unlink()
         
         # Stop local server if running
-        self._stop_local_server()
+        # self._stop_local_server() # This line is removed as per the new_code
+        pass # No local server to stop here
     
     def get_user_info(self) -> Optional[Dict[str, Any]]:
         """Get current user information"""

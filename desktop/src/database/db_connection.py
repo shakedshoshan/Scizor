@@ -240,6 +240,7 @@ class DatabaseConnection:
             # If no features are saved, use defaults
             if not feature_order:
                 feature_order = [
+                    'Authentication',
                     'Clipboard History',
                     'Notes',
                     'AI Prompt Enhancement',
@@ -262,6 +263,7 @@ class DatabaseConnection:
             if not visibility:
                 visibility = {
                     'header': True,
+                    'authentication': True,
                     'clipboard_history': True,
                     'notes': True,
                     'ai_prompt_enhancement': True,
@@ -276,6 +278,7 @@ class DatabaseConnection:
             # Return default settings if loading fails
             return {
                 'feature_order': [
+                    'Authentication',
                     'Clipboard History',
                     'Notes',
                     'AI Prompt Enhancement',
@@ -285,6 +288,7 @@ class DatabaseConnection:
                 'features_per_column': 2,
                 'visibility': {
                     'header': True,
+                    'authentication': True,
                     'clipboard_history': True,
                     'notes': True,
                     'ai_prompt_enhancement': True,

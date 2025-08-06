@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         self.main_splitter = QSplitter(Qt.Orientation.Vertical)
         self.main_splitter.setChildrenCollapsible(False)  # Prevent panels from being collapsed to zero size
         
-        # Add main splitter to layout (panels will be added dynamically)
+        # Add header to main splitter
         self.main_splitter.addWidget(self.header)
         self.main_layout.addWidget(self.main_splitter)
         
@@ -350,15 +350,20 @@ class MainWindow(QMainWindow):
             if widget:
                 widget.setParent(None)
         
-        # Get visible features in order (excluding header)
+        # Get visible features in order
         visible_features = []
         for feature_name in self.current_settings['feature_order']:
             # Map feature names to visibility keys using the mapping
             visibility_key = self.feature_visibility_mapping.get(feature_name, feature_name.lower().replace(' ', '_'))
             if self.current_settings['visibility'].get(visibility_key, True):
                 visible_features.append(feature_name)
+        
+        # Debug: Print what features are visible
+        print(f"Visible features: {visible_features}")
+        print(f"Available panels: {list(self.panels.keys())}")
                 
         if not visible_features:
+            print("No visible features found!")
             return
             
         # Rebuild layout based on settings
@@ -373,7 +378,12 @@ class MainWindow(QMainWindow):
             # Single column layout
             for feature_name in visible_features:
                 if feature_name in self.panels:
-                    self.main_splitter.addWidget(self.panels[feature_name])
+                    panel = self.panels[feature_name]
+                    print(f"Adding panel: {feature_name}")
+                    self.main_splitter.addWidget(panel)
+                    # Ensure the panel is visible
+                    panel.setVisible(True)
+                    panel.show()
         else:
             # Multi-column layout using horizontal splitter
             # Create a horizontal splitter for columns
@@ -393,7 +403,12 @@ class MainWindow(QMainWindow):
                 if feature_name in self.panels:
                     # Calculate which column this feature should go in
                     column_index = (i // features_per_column) % columns
-                    column_splitters[column_index].addWidget(self.panels[feature_name])
+                    panel = self.panels[feature_name]
+                    print(f"Adding panel {feature_name} to column {column_index}")
+                    column_splitters[column_index].addWidget(panel)
+                    # Ensure the panel is visible
+                    panel.setVisible(True)
+                    panel.show()
             
             # Add the columns splitter to main splitter
             self.main_splitter.addWidget(columns_splitter)
@@ -413,4 +428,14 @@ class MainWindow(QMainWindow):
                 panel_height = remaining_height // remaining_panels
                 sizes = [header_height] + [panel_height] * remaining_panels
                 self.main_splitter.setSizes(sizes)
+            else:
+                # Only header
+                sizes = [header_height]
+                self.main_splitter.setSizes(sizes)
+                
+        # Debug: Print final layout info
+        print(f"Main splitter has {self.main_splitter.count()} widgets")
+        for i in range(self.main_splitter.count()):
+            widget = self.main_splitter.widget(i)
+            print(f"  Widget {i}: {widget.__class__.__name__} - Visible: {widget.isVisible()}")
         

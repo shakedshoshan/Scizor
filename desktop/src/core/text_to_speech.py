@@ -42,16 +42,18 @@ class TextToSpeech:
     def convert_text_to_speech(
         self,
         text: str,
+        user_id: str,
         voice: str = "alloy",
         response_format: str = "mp3",
         speed: float = 1.0,
-        model: str = "tts-1"
+        model: str = "tts-1",
     ) -> Optional[bytes]:
         """
         Convert text to speech using the backend API.
         
         Args:
             text (str): Text to convert to speech
+            user_id (str): The user ID for the request
             voice (str): Voice type (alloy, echo, fable, onyx, nova, shimmer)
             response_format (str): Audio format (mp3, opus, aac, flac)
             speed (float): Speech speed (0.25 to 2.0)
@@ -61,9 +63,18 @@ class TextToSpeech:
             Optional[bytes]: Audio data as bytes, or None if failed
         """
         try:
+            if not text or not text.strip():
+                print("Error: Text cannot be empty")
+                return None
+                
+            if not user_id or not user_id.strip():
+                print("Error: User ID cannot be empty")
+                return None
+            
             # Prepare request payload
             payload = {
-                "text": text,
+                "text": text.strip(),
+                "user_id": user_id.strip(),
                 "voice": voice,
                 "responseFormat": response_format,
                 "speed": speed,
@@ -194,6 +205,7 @@ class TextToSpeech:
     def text_to_speech_and_play(
         self,
         text: str,
+        user_id: str,
         voice: str = "alloy",
         response_format: str = "mp3",
         speed: float = 1.0,
@@ -205,6 +217,7 @@ class TextToSpeech:
         
         Args:
             text (str): Text to convert to speech
+            user_id (str): The user ID for the request
             voice (str): Voice type
             response_format (str): Audio format
             speed (float): Speech speed
@@ -215,7 +228,7 @@ class TextToSpeech:
             Optional[threading.Thread]: Thread object if async_playback is True, None otherwise
         """
         # Convert text to speech
-        audio_data = self.convert_text_to_speech(text, voice, response_format, speed, model)
+        audio_data = self.convert_text_to_speech(text, user_id, voice, response_format, speed, model)
         
         if audio_data is None:
             print("Failed to convert text to speech")
@@ -291,6 +304,7 @@ class TextToSpeech:
 # Convenience function for quick text-to-speech
 def speak_text(
     text: str,
+    user_id: str,
     voice: str = "alloy",
     base_url: str = "http://localhost:5000",
     async_playback: bool = True
@@ -300,14 +314,16 @@ def speak_text(
     
     Args:
         text (str): Text to convert to speech
+        user_id (str): The user ID for the request
         voice (str): Voice type to use
         base_url (str): Backend API base URL
         async_playback (bool): Whether to play audio asynchronously
+        headers (Optional[Dict[str, str]]): Optional authentication headers
         
     Returns:
         Optional[threading.Thread]: Thread object if async_playback is True, None otherwise
     """
     tts = TextToSpeech(base_url)
-    return tts.text_to_speech_and_play(text, voice, async_playback=async_playback)
+    return tts.text_to_speech_and_play(text, user_id, voice, async_playback=async_playback)
 
 

@@ -37,12 +37,14 @@ class EnhancePromptService:
     def enhance_prompt(
         self, 
         prompt: str, 
+        user_id: str,
     ) -> Dict[str, Any]:
         """
         Enhance a prompt using the backend AI API
         
         Args:
             prompt: The original prompt to enhance
+            user_id: The user ID for the request
             
         Returns:
             Dictionary containing the enhanced prompt and metadata
@@ -54,9 +56,13 @@ class EnhancePromptService:
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty")
             
+        if not user_id or not user_id.strip():
+            raise ValueError("User ID cannot be empty")
+            
         # Prepare request payload
         payload = {
             "prompt": prompt.strip(),
+            "user_id": user_id.strip(),
         }
             
         try:
@@ -133,17 +139,22 @@ def get_enhance_prompt_service(base_url: str = "http://localhost:5000") -> Enhan
 
 def enhance_prompt(
     prompt: str, 
-    base_url: str = "http://localhost:5000"
+    user_id: str,
+    base_url: str = "http://localhost:5000",
 ) -> Dict[str, Any]:
     """
     Convenience function to enhance a prompt
     
     Args:
         prompt: The original prompt to enhance
+        user_id: The user ID for the request
         base_url: Base URL for the backend API
         
     Returns:
         Dictionary containing the enhanced prompt and metadata
     """
     service = get_enhance_prompt_service(base_url)
-    return service.enhance_prompt(prompt)
+    return service.enhance_prompt(
+        prompt, 
+        user_id, 
+    )

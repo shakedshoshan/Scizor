@@ -17,6 +17,9 @@ from core.clipboard_manager import get_clipboard_manager
 from ui.component.spinner import WaitingSpinner
 from ui.component.popup_window import show_popup
 from core.text_to_speech import TextToSpeech
+from auth.device_auth import DeviceAuthManager
+from database.db_connection import get_database
+from auth.auth_checker import get_authenticated_user as get_auth_user
 
 
 class EnhancePromptWorker(QThread):
@@ -25,16 +28,17 @@ class EnhancePromptWorker(QThread):
     finished = pyqtSignal(dict)  # Signal emitted when enhancement is complete
     error = pyqtSignal(str)      # Signal emitted when an error occurs
     
-    def __init__(self, text: str):
+    def __init__(self, text: str, user_id: str):
         super().__init__()
         self.text = text
+        self.user_id = user_id
         
     def run(self):
         """Run the enhancement in a separate thread"""
         try:
             from core.enhance_prompt import get_enhance_prompt_service
             enhance_service = get_enhance_prompt_service()
-            result = enhance_service.enhance_prompt(self.text)
+            result = enhance_service.enhance_prompt(self.text, self.user_id)
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -46,16 +50,17 @@ class GenerateResponseWorker(QThread):
     finished = pyqtSignal(dict)  # Signal emitted when generation is complete
     error = pyqtSignal(str)      # Signal emitted when an error occurs
     
-    def __init__(self, text: str):
+    def __init__(self, text: str, user_id: str):
         super().__init__()
         self.text = text
+        self.user_id = user_id
         
     def run(self):
         """Run the response generation in a separate thread"""
         try:
             from core.generate_response import get_generate_response_service
             generate_service = get_generate_response_service()
-            result = generate_service.generate_response(self.text)
+            result = generate_service.generate_response(self.text, self.user_id)
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -67,16 +72,17 @@ class TextToSpeechWorker(QThread):
     finished = pyqtSignal()  # Signal emitted when TTS is complete
     error = pyqtSignal(str)  # Signal emitted when an error occurs
     
-    def __init__(self, text: str, voice: str = "alloy"):
+    def __init__(self, text: str, user_id: str, voice: str = "alloy"):
         super().__init__()
         self.text = text
+        self.user_id = user_id
         self.voice = voice
         
     def run(self):
         """Run the text-to-speech conversion in a separate thread"""
         try:
             tts = TextToSpeech()
-            thread = tts.text_to_speech_and_play(self.text, voice=self.voice)
+            thread = tts.text_to_speech_and_play(self.text, self.user_id, voice=self.voice)
             if thread:
                 thread.join()  # Wait for audio playback to complete
                 self.finished.emit()
@@ -177,12 +183,18 @@ class HotkeyManager(QObject):
         self._hotkey_thread: Optional[threading.Thread] = None
         self.clipboard_manager = get_clipboard_manager()
         self.floating_spinner = FloatingSpinner()
+        self.auth_manager = DeviceAuthManager()
+        self.db = get_database()
         
         # Connect signals to main thread operations
         self.show_spinner_requested.connect(self._show_spinner_main_thread)
         self.hide_spinner_requested.connect(self._hide_spinner_main_thread)
         self.update_spinner_text_requested.connect(self._update_spinner_text_main_thread)
         self.show_popup_requested.connect(self._show_popup_main_thread)
+    
+    def get_authenticated_user(self) -> Optional[Dict]:
+        """Get the currently authenticated user from the database"""
+        return get_auth_user()
         
     def start(self):
         """Start listening for hotkeys"""
@@ -268,6 +280,18 @@ class HotkeyManager(QObject):
     def _on_enhance_prompt_hotkey(self):
         """Handle the enhance prompt hotkey press - capture selected text and replace with enhanced version"""
         try:
+            # Get authenticated user
+            user_info = self.get_authenticated_user()
+            if not user_info:
+                print("User not authenticated. Please authenticate first.")
+                return
+            
+            user_id = user_info.get('user_id')
+            print(f"User ID: {user_id}")
+            if not user_id:
+                print("No user ID available. Please authenticate first.")
+                return
+            
             # Store current clipboard content
             original_clipboard = pyperclip.paste()
             
@@ -301,7 +325,7 @@ class HotkeyManager(QObject):
                     print(f"Failed to add to clipboard history: {e}")
                 
                 # Start enhancement with spinner - use signals for thread safety
-                self._enhance_with_spinner(selected_text)
+                self._enhance_with_spinner(selected_text, user_id)
             else:
                 print("No text selected. Please select text first, then press Ctrl+Alt+H.")
                 
@@ -311,6 +335,17 @@ class HotkeyManager(QObject):
     def _on_generate_response_hotkey(self):
         """Handle the generate response hotkey press - capture selected text and replace with generated response"""
         try:
+            # Get authenticated user
+            user_info = self.get_authenticated_user()
+            if not user_info:
+                print("User not authenticated. Please authenticate first.")
+                return
+            
+            user_id = user_info.get('user_id')
+            if not user_id:
+                print("No user ID available. Please authenticate first.")
+                return
+            
             # Store current clipboard content
             original_clipboard = pyperclip.paste()
             
@@ -344,7 +379,7 @@ class HotkeyManager(QObject):
                     print(f"Failed to add to clipboard history: {e}")
                 
                 # Start response generation with spinner - use signals for thread safety
-                self._generate_with_spinner(selected_text)
+                self._generate_with_spinner(selected_text, user_id)
             else:
                 print("No text selected. Please select text first, then press Ctrl+Alt+G.")
                 
@@ -354,7 +389,18 @@ class HotkeyManager(QObject):
     def _on_text_to_speech_hotkey(self):
         """Handle the text-to-speech hotkey press - capture selected text and convert to speech"""
         try:
-            # # Store current clipboard content
+            # Get authenticated user
+            user_info = self.get_authenticated_user()
+            if not user_info:
+                print("User not authenticated. Please authenticate first.")
+                return
+            
+            user_id = user_info.get('user_id')
+            if not user_id:
+                print("No user ID available. Please authenticate first.")
+                return
+            
+            # Store current clipboard content
             original_clipboard = pyperclip.paste()
             
             # Simulate Ctrl+C to copy selected text
@@ -371,8 +417,7 @@ class HotkeyManager(QObject):
                 pyperclip.copy(original_clipboard)
             
             if selected_text and selected_text != original_clipboard:
-                
-                
+                # Validate text length
                 if len(selected_text) > 10000:
                     print("Selected text is too long. Please select a shorter text to convert to speech.")
                     return
@@ -384,21 +429,21 @@ class HotkeyManager(QObject):
                     print(f"Failed to add to clipboard history: {e}")
                 
                 # Start text-to-speech conversion with spinner - use signals for thread safety
-                self._text_to_speech_with_spinner(selected_text)
+                self._text_to_speech_with_spinner(selected_text, user_id)
             else:
                 print("No text selected. Please select text first, then press Ctrl+Alt+R.")
                 
         except Exception as e:
             print(f"Error in text-to-speech hotkey: {e}")
     
-    def _enhance_with_spinner(self, text: str):
+    def _enhance_with_spinner(self, text: str, user_id: str):
         """Enhance text with spinner feedback"""
         try:
             # Show loading spinner
             self.show_spinner_requested.emit("Loading...")
             
             # Create and start worker thread
-            self.floating_spinner.worker = EnhancePromptWorker(text)
+            self.floating_spinner.worker = EnhancePromptWorker(text, user_id)
             self.floating_spinner.worker.finished.connect(self._on_enhancement_complete)
             self.floating_spinner.worker.error.connect(self._on_enhancement_error)
             self.floating_spinner.worker.start()
@@ -407,14 +452,14 @@ class HotkeyManager(QObject):
             print(f"Error starting enhancement: {e}")
             self.hide_spinner_requested.emit()
     
-    def _generate_with_spinner(self, text: str):
+    def _generate_with_spinner(self, text: str, user_id: str):
         """Generate response with spinner feedback"""
         try:
             # Show loading spinner
             self.show_spinner_requested.emit("Generating response...")
             
             # Create and start worker thread
-            self.floating_spinner.worker = GenerateResponseWorker(text)
+            self.floating_spinner.worker = GenerateResponseWorker(text, user_id)
             self.floating_spinner.worker.finished.connect(self._on_generation_complete)
             self.floating_spinner.worker.error.connect(self._on_generation_error)
             self.floating_spinner.worker.start()
@@ -423,14 +468,14 @@ class HotkeyManager(QObject):
             print(f"Error starting response generation: {e}")
             self.hide_spinner_requested.emit()
     
-    def _text_to_speech_with_spinner(self, text: str):
+    def _text_to_speech_with_spinner(self, text: str, user_id: str):
         """Convert text to speech with spinner feedback"""
         try:
             # Show loading spinner
             self.show_spinner_requested.emit("Converting to speech...")
             
             # Create and start worker thread
-            self.floating_spinner.worker = TextToSpeechWorker(text, voice="nova")
+            self.floating_spinner.worker = TextToSpeechWorker(text, user_id, voice="nova")
             self.floating_spinner.worker.finished.connect(self._on_tts_complete)
             self.floating_spinner.worker.error.connect(self._on_tts_error)
             self.floating_spinner.worker.start()
@@ -580,6 +625,18 @@ class HotkeyManager(QObject):
     def _enhance_and_replace_text(self, text: str):
         """Legacy method - kept for compatibility"""
         try:
+            # Check if user is authenticated
+            if not self.auth_manager.is_authenticated():
+                print("User not authenticated. Please authenticate first.")
+                return
+            
+            # Get user ID
+            user_id = self.auth_manager.user_id
+            print(f"User ID2: {user_id}")
+            if not user_id:
+                print("No user ID available. Please authenticate first.")
+                return
+            
             # Import enhance prompt service
             from core.enhance_prompt import get_enhance_prompt_service
             
@@ -587,7 +644,7 @@ class HotkeyManager(QObject):
             enhance_service = get_enhance_prompt_service()
             
             # Enhance the prompt
-            result = enhance_service.enhance_prompt(text)
+            result = enhance_service.enhance_prompt(text, user_id)
             enhanced_text = result.get('enhancedPrompt', '')
             
             if enhanced_text:

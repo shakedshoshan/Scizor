@@ -1,0 +1,15 @@
+{
+  "name": "scizor-desktop",
+  "version": "1.0.0",
+  "description": "productivity is easy",
+  "main": "index.js",
+  "scripts": {
+    "test": "test-desktop",
+    "start": "electron ."
+  },
+  "author": "shaked",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^37.2.6"
+  }
+}

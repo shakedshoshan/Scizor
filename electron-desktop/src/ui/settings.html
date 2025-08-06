@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scizor Settings</title>
+    <link rel="stylesheet" href="styles/settings.css">
+</head>
+<body>
+    <div id="settings-app">
+        <div class="settings-header">
+            <h1>Scizor Settings</h1>
+            <button id="close-btn" class="btn btn-secondary">Close</button>
+        </div>
+
+        <div class="settings-content">
+            <!-- Layout Settings -->
+            <div class="settings-section">
+                <h2>Layout Settings</h2>
+                
+                <div class="form-group">
+                    <label for="columns">Number of Columns:</label>
+                    <select id="columns" class="form-control">
+                        <option value="1">Single Column</option>
+                        <option value="2">Two Columns</option>
+                        <option value="3">Three Columns</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="features-per-column">Features per Column:</label>
+                    <input type="number" id="features-per-column" class="form-control" min="1" max="4" value="2">
+                </div>
+            </div>
+
+            <!-- Feature Visibility -->
+            <div class="settings-section">
+                <h2>Feature Visibility</h2>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="clipboard-history" checked>
+                        Clipboard History
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="notes" checked>
+                        Notes
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ai-prompt-enhancement" checked>
+                        AI Prompt Enhancement
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ai-smart-response">
+                        AI Smart Response
+                    </label>
+                </div>
+            </div>
+
+            <!-- Feature Order -->
+            <div class="settings-section">
+                <h2>Feature Order</h2>
+                <div id="feature-order" class="feature-order">
+                    <!-- Feature order will be populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="settings-actions">
+                <button id="apply-btn" class="btn btn-primary">Apply Settings</button>
+                <button id="save-btn" class="btn btn-secondary">Save Settings</button>
+                <button id="reset-btn" class="btn btn-danger">Reset to Defaults</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/settings.js"></script>
+</body>
+</html> 

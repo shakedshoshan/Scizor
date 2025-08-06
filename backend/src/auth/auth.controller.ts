@@ -99,11 +99,12 @@ export class AuthController {
       
       return {
         success: true,
-        message: 'User created successfully with 0 tokens',
+        message: 'User created successfully with 20 tokens',
         data: {
           document_id: documentId,
           user_id: createUserDto.user_id,
-          tokens: 0,
+          tokens: 20,
+          is_premium: false,
         },
       };
     } catch (error) {

@@ -89,6 +89,7 @@ export class FirestoreService implements OnModuleInit {
         .add({
           user_id: data.user_id,
           tokens: 20,
+          is_premium: false,
           created_at: admin.firestore.FieldValue.serverTimestamp(),
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -118,6 +119,7 @@ export class FirestoreService implements OnModuleInit {
       return {
         user_id: doc.data().user_id,
         tokens: doc.data().tokens,
+        is_premium: doc.data().is_premium,
       };
     } catch (error) {
       throw new Error(`Failed to get user token: ${error.message}`);
@@ -158,6 +160,7 @@ export class FirestoreService implements OnModuleInit {
       return {
         user_id: userId,
         tokens: updateData.tokens,
+        is_premium: doc.data().is_premium,
       };
     } catch (error) {
       throw new Error(`Failed to update user token: ${error.message}`);

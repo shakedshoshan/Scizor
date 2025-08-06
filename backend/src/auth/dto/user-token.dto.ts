@@ -4,7 +4,7 @@
  * This DTO defines the structure for user token data to be stored in Firestore
  */
 
-import { IsString, IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsBoolean } from 'class-validator';
 
 export class CreateUserTokenDto {
   @IsString()
@@ -20,12 +20,20 @@ export class UserTokenDto {
   @IsNumber()
   @Min(0)
   tokens: number;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  is_premium: boolean;
 }
 
 export class UpdateUserTokenDto {
   @IsNumber()
   @Min(0)
   tokens: number;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  is_premium: boolean;
 }
 
 export class DeductTokenDto {

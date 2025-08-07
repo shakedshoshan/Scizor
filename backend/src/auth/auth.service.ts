@@ -18,7 +18,6 @@
 
 import { Injectable } from '@nestjs/common';
 import { DeviceTokenExchangeDto, DeviceTokenRefreshDto, DeviceTokenResponseDto } from './dto/device-token.dto';
-import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()

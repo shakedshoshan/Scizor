@@ -16,7 +16,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { CreateTextDto } from './dto/text.dto';
-import { CreateUserTokenDto, UserTokenDto, UpdateUserTokenDto, DeductTokenDto, DeductTokenResultDto } from './dto/user-token.dto';
+import { CreateUserTokenDto, UserTokenDto, UpdateUserTokenDto, DeductTokenResultDto } from './dto/user-token.dto';
 
 @Injectable()
 export class FirestoreService implements OnModuleInit {

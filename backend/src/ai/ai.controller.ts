@@ -16,15 +16,20 @@
 import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { AiService } from './ai.service';
+import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
 import { TextToSpeechDto } from './dto/text-to-speech.dto';
+import { CreateTextDto, ActionType } from '../auth/dto/text.dto';
 
 @Controller('ai')
 export class AiController {
   private readonly logger = new Logger(AiController.name);
 
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly firestoreService: FirestoreService,
+  ) {}
 
   /**
    * POST /ai/enhance-prompt
@@ -40,6 +45,15 @@ export class AiController {
     
     try {
       const result = await this.aiService.enhancePrompt(enhancePromptDto);
+      
+      // Log the text operation to Firestore
+      const textData: CreateTextDto = {
+        user_id: enhancePromptDto.user_id,
+        action_type: ActionType.ENHANCE,
+        text: enhancePromptDto.prompt,
+      };
+      await this.firestoreService.addTextDocument(textData);
+      
       this.logger.log(`Prompt enhancement completed successfully for user: ${enhancePromptDto.user_id}`);
       return {
         success: true,
@@ -76,6 +90,15 @@ export class AiController {
     
     try {
       const result = await this.aiService.generateResponse(generateResponseDto);
+      
+      // Log the text operation to Firestore
+      const textData: CreateTextDto = {
+        user_id: generateResponseDto.user_id,
+        action_type: ActionType.RESPOND,
+        text: generateResponseDto.content,
+      };
+      await this.firestoreService.addTextDocument(textData);
+      
       this.logger.log(`Response generation completed successfully for user: ${generateResponseDto.user_id}`);
       return {
         success: true,
@@ -113,6 +136,14 @@ export class AiController {
     
     try {
       const result = await this.aiService.textToSpeech(textToSpeechDto);
+      
+      // Log the text operation to Firestore
+      const textData: CreateTextDto = {
+        user_id: textToSpeechDto.user_id,
+        action_type: ActionType.READ,
+        text: textToSpeechDto.text,
+      };
+      await this.firestoreService.addTextDocument(textData);
       
       // Set appropriate headers for audio response
       const contentType = this.getContentType(result.format);

@@ -7,6 +7,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import UserAvatar from '@/components/UserAvatar';
 import { useCreateUserToken } from '@/hooks/CreateNewUserToken';
 
+interface AuthParams {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod?: string;
+  state?: string;
+  scope?: string;
+}
+
 const BasicAuth: React.FC = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -17,7 +26,7 @@ const BasicAuth: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
-  const [authParams, setAuthParams] = useState<any>(null);
+  const [authParams, setAuthParams] = useState<AuthParams | null>(null);
   
   const { createUserToken } = useCreateUserToken();
 
@@ -43,9 +52,9 @@ const BasicAuth: React.FC = () => {
         clientId,
         redirectUri,
         codeChallenge,
-        codeChallengeMethod,
-        state,
-        scope
+        codeChallengeMethod: codeChallengeMethod || undefined,
+        state: state || undefined,
+        scope: scope || undefined
       });
       console.log('✅ Device authentication flow detected');
     } else {
@@ -72,16 +81,25 @@ const BasicAuth: React.FC = () => {
       });
       
       // Redirect to consent page for device authentication
-      const consentUrl = `/auth/device/consent?${new URLSearchParams({
+      const params: Record<string, string> = {
         client_id: authParams.clientId,
         redirect_uri: authParams.redirectUri,
         code_challenge: authParams.codeChallenge,
-        code_challenge_method: authParams.codeChallengeMethod,
-        state: authParams.state,
-        scope: authParams.scope,
         user_id: user.uid,
         email: user.email || ''
-      }).toString()}`;
+      };
+      
+      if (authParams.codeChallengeMethod) {
+        params.code_challenge_method = authParams.codeChallengeMethod;
+      }
+      if (authParams.state) {
+        params.state = authParams.state;
+      }
+      if (authParams.scope) {
+        params.scope = authParams.scope;
+      }
+      
+      const consentUrl = `/auth/device/consent?${new URLSearchParams(params).toString()}`;
       
       console.log('🔍 Redirecting to consent page:', consentUrl);
       router.push(consentUrl);

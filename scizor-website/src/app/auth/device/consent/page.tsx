@@ -2,14 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
+
+interface AuthParams {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod?: string;
+  state?: string;
+  scope?: string;
+  userId: string;
+}
 
 const DeviceConsentPage: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [authParams, setAuthParams] = useState<any>(null);
+  const [authParams, setAuthParams] = useState<AuthParams | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [consentToken, setConsentToken] = useState('');
   const [showConsentToken, setShowConsentToken] = useState(false);
@@ -54,9 +63,9 @@ const DeviceConsentPage: React.FC = () => {
       clientId,
       redirectUri,
       codeChallenge,
-      codeChallengeMethod,
-      state,
-      scope,
+      codeChallengeMethod: codeChallengeMethod || undefined,
+      state: state || undefined,
+      scope: scope || undefined,
       userId
     });
     setUserEmail(email || '');
@@ -66,6 +75,12 @@ const DeviceConsentPage: React.FC = () => {
     console.log('🔍 handleGrantPermission called');
     setIsLoading(true);
     setError('');
+
+    if (!authParams) {
+      setError('Authentication parameters not found');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       console.log('🔍 Generating JWT consent token...');
@@ -108,8 +123,13 @@ const DeviceConsentPage: React.FC = () => {
   };
 
   const handleDenyPermission = () => {
+    if (!authParams) {
+      setError('Authentication parameters not found');
+      return;
+    }
+    
     // Redirect to desktop app with error
-    const redirectUrl = `${authParams.redirectUri}?error=access_denied&state=${authParams.state}`;
+    const redirectUrl = `${authParams.redirectUri}?error=access_denied&state=${authParams.state || ''}`;
     window.location.href = redirectUrl;
   };
 

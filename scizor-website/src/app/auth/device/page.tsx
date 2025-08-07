@@ -5,6 +5,15 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useCreateUserToken } from '@/hooks/CreateNewUserToken';
 
+interface AuthParams {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod?: string;
+  state?: string;
+  scope?: string;
+}
+
 const DeviceAuthPage: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -13,7 +22,7 @@ const DeviceAuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [authParams, setAuthParams] = useState<any>(null);
+  const [authParams, setAuthParams] = useState<AuthParams | null>(null);
   
   const { createUserToken } = useCreateUserToken();
 
@@ -35,9 +44,9 @@ const DeviceAuthPage: React.FC = () => {
       clientId,
       redirectUri,
       codeChallenge,
-      codeChallengeMethod,
-      state,
-      scope
+      codeChallengeMethod: codeChallengeMethod || undefined,
+      state: state || undefined,
+      scope: scope || undefined
     });
   }, [searchParams]);
 

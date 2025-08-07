@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import UserAvatar from '@/components/UserAvatar';
 import { useState, useEffect } from 'react';
-import { getUserData } from '@/app/api/auth/getUserToken/route';
+import { getUserData } from '@/hooks/getUserToken';
 
 interface UserData {
   tokens: number;

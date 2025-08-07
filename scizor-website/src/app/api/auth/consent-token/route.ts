@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const url = process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.DEV_URL;
     
     // Forward the request to the backend
-    const response = await fetch('http://localhost:5000/auth/consent-token', {
+    const response = await fetch(`${url}/auth/consent-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

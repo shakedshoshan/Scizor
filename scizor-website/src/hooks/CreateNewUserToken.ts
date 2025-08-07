@@ -10,12 +10,14 @@ interface CreateUserTokenPayload {
   user_id: string;
 }
 
-const DEV_URL = 'http://localhost:5000';
+
 
 export const useCreateUserToken = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  
+  const url = process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.DEV_URL;
 
   const createUserToken = async (userId: string): Promise<CreateUserTokenResponse> => {
     setLoading(true);
@@ -27,10 +29,9 @@ export const useCreateUserToken = () => {
         user_id: userId
       };
 
-      console.log('Creating user token for:', userId);
-      console.log('API URL:', `${DEV_URL}/auth/create-user-token`);
+      
 
-      const response = await fetch(`${DEV_URL}/auth/create-user-token`, {
+      const response = await fetch(`${url}/auth/create-user-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import BasicAuth from '@/components/auth/BasicAuth';
+import { Suspense } from 'react';
 
 export default function AuthPage() {
   return (
@@ -12,7 +13,13 @@ export default function AuthPage() {
             Sign in to access your AI-powered productivity tools
           </p>
         </div>
-        <BasicAuth />
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <BasicAuth />
+        </Suspense>
       </div>
     </div>
   );

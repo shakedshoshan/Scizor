@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 interface AuthParams {
@@ -13,7 +13,7 @@ interface AuthParams {
   userId: string;
 }
 
-const DeviceConsentPage: React.FC = () => {
+const DeviceConsentContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -311,6 +311,23 @@ const DeviceConsentPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const DeviceConsentPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <DeviceConsentContent />
+    </Suspense>
   );
 };
 

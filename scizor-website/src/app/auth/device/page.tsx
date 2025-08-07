@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useCreateUserToken } from '@/hooks/CreateNewUserToken';
@@ -14,7 +14,7 @@ interface AuthParams {
   scope?: string;
 }
 
-const DeviceAuthPage: React.FC = () => {
+const DeviceAuthContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -225,6 +225,23 @@ const DeviceAuthPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const DeviceAuthPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <DeviceAuthContent />
+    </Suspense>
   );
 };
 

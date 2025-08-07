@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
+import Image from 'next/image';
 
 interface UserAvatarProps {
   user: User;
@@ -85,9 +86,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md', className = 
 
   if (photoURL && !imageError) {
     return (
-      <img
+      <Image
         src={photoURL}
         alt={`${user.displayName || user.email || 'User'} avatar`}
+        width={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
+        height={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
         className={`${sizeClasses[size]} rounded-full object-cover ${className}`}
         onError={() => setImageError(true)}
       />

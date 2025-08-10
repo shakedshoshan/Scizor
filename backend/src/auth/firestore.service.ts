@@ -12,7 +12,7 @@
  * - Provides database operation utilities
  */
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { CreateTextDto } from './dto/text.dto';
@@ -21,17 +21,85 @@ import { CreateUserTokenDto, UserTokenDto, UpdateUserTokenDto, DeductTokenResult
 @Injectable()
 export class FirestoreService implements OnModuleInit {
   private firestore: admin.firestore.Firestore;
+  private readonly logger = new Logger(FirestoreService.name);
 
   constructor(private configService: ConfigService) {}
+
+  /**
+   * Helper method to properly format Firebase private key
+   */
+  private formatPrivateKey(privateKeyRaw: string): string {
+    let privateKey = privateKeyRaw.trim();
+    
+    // If the key contains literal \n, replace them with actual newlines
+    if (privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+    
+    // Ensure the key starts and ends with proper PEM format
+    if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+      throw new Error('Private key must start with -----BEGIN PRIVATE KEY-----');
+    }
+    if (!privateKey.endsWith('-----END PRIVATE KEY-----\n')) {
+      throw new Error('Private key must end with -----END PRIVATE KEY-----\n');
+    }
+    
+    return privateKey;
+  }
 
   async onModuleInit() {
     // Initialize Firebase Admin SDK
     if (!admin.apps.length) {
-      admin.initializeApp({
-        projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
-        // For local development, you can use service account key
-        // credential: admin.credential.cert(serviceAccountKey),
-      });
+      const projectId = this.configService.get<string>('FIREBASE_PROJECT_ID');
+      const clientEmail = this.configService.get<string>('FIREBASE_CLIENT_EMAIL');
+      const privateKeyInput = this.configService.get<string>('FIREBASE_PRIVATE_KEY');
+
+      try {
+        if (clientEmail && privateKeyInput) {
+          // Use explicit service account credentials (works on AWS Lambda)
+          // Accept either raw PEM (with or without \n escaped) OR base64-encoded PEM
+          let normalizedPem: string;
+          if (privateKeyInput.includes('BEGIN PRIVATE KEY')) {
+            // Raw PEM; may include \n escapes
+            normalizedPem = this.formatPrivateKey(privateKeyInput);
+          } else {
+            // Likely base64-encoded string; decode then format
+            const decoded = Buffer.from(privateKeyInput, 'base64').toString('utf8');
+            normalizedPem = this.formatPrivateKey(decoded);
+          }
+
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId,
+              clientEmail,
+              privateKey: normalizedPem,
+            }),
+            projectId,
+          });
+          
+          this.logger.log('Firebase Admin initialized with service account credentials');
+        } else {
+          // Fallback to application default credentials (works on GCP/dev environments)
+          admin.initializeApp({
+            projectId,
+          });
+          
+          this.logger.log('Firebase Admin initialized with application default credentials');
+        }
+      } catch (error) {
+        this.logger.error('Failed to initialize Firebase Admin:', error.message);
+        
+        // If credentials fail, try to initialize without them (for development)
+        try {
+          admin.initializeApp({
+            projectId,
+          });
+          this.logger.log('Firebase Admin initialized with fallback credentials');
+        } catch (fallbackError) {
+          this.logger.error('Firebase Admin initialization completely failed:', fallbackError.message);
+          throw new Error(`Firebase initialization failed: ${fallbackError.message}`);
+        }
+      }
     }
     
     this.firestore = admin.firestore();
@@ -234,5 +302,29 @@ export class FirestoreService implements OnModuleInit {
    */
   getFirestore(): admin.firestore.Firestore {
     return this.firestore;
+  }
+
+  /**
+   * Check if Firebase is properly initialized
+   */
+  isInitialized(): boolean {
+    return !!this.firestore && admin.apps.length > 0;
+  }
+
+  /**
+   * Get initialization status for debugging
+   */
+  getInitializationStatus(): { 
+    firebaseApps: number; 
+    firestore: boolean; 
+    projectId: string | undefined;
+    hasCredentials: boolean;
+  } {
+    return {
+      firebaseApps: admin.apps.length,
+      firestore: !!this.firestore,
+      projectId: this.configService.get<string>('FIREBASE_PROJECT_ID'),
+      hasCredentials: !!(this.configService.get<string>('FIREBASE_CLIENT_EMAIL') && this.configService.get<string>('FIREBASE_PRIVATE_KEY'))
+    };
   }
 } 

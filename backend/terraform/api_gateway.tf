@@ -67,39 +67,39 @@ resource "aws_api_gateway_method" "health_method" {
 
 # Connect all methods to the Lambda Function
 resource "aws_api_gateway_integration" "enhance_prompt_integration" {
-  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
-  resource_id = aws_api_gateway_resource.enhance_prompt_resource.id
-  http_method = aws_api_gateway_method.enhance_prompt_method.http_method
-  type        = "AWS_PROXY"
+  rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id             = aws_api_gateway_resource.enhance_prompt_resource.id
+  http_method             = aws_api_gateway_method.enhance_prompt_method.http_method
+  type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri         = aws_lambda_function.scizor_ai_lambda.invoke_arn
+  uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
 }
 
 resource "aws_api_gateway_integration" "generate_response_integration" {
-  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
-  resource_id = aws_api_gateway_resource.generate_response_resource.id
-  http_method = aws_api_gateway_method.generate_response_method.http_method
-  type        = "AWS_PROXY"
+  rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id             = aws_api_gateway_resource.generate_response_resource.id
+  http_method             = aws_api_gateway_method.generate_response_method.http_method
+  type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri         = aws_lambda_function.scizor_ai_lambda.invoke_arn
+  uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
 }
 
 resource "aws_api_gateway_integration" "text_to_speech_integration" {
-  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
-  resource_id = aws_api_gateway_resource.text_to_speech_resource.id
-  http_method = aws_api_gateway_method.text_to_speech_method.http_method
-  type        = "AWS_PROXY"
+  rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id             = aws_api_gateway_resource.text_to_speech_resource.id
+  http_method             = aws_api_gateway_method.text_to_speech_method.http_method
+  type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri         = aws_lambda_function.scizor_ai_lambda.invoke_arn
+  uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
 }
 
 resource "aws_api_gateway_integration" "health_integration" {
-  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
-  resource_id = aws_api_gateway_resource.health_resource.id
-  http_method = aws_api_gateway_method.health_method.http_method
-  type        = "AWS_PROXY"
+  rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id             = aws_api_gateway_resource.health_resource.id
+  http_method             = aws_api_gateway_method.health_method.http_method
+  type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri         = aws_lambda_function.scizor_ai_lambda.invoke_arn
+  uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
 }
 
 # Create OPTIONS methods for CORS support
@@ -130,7 +130,7 @@ resource "aws_api_gateway_integration" "enhance_prompt_options_integration" {
   resource_id = aws_api_gateway_resource.enhance_prompt_resource.id
   http_method = aws_api_gateway_method.enhance_prompt_options.http_method
   type        = "MOCK"
-  
+
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
@@ -141,7 +141,7 @@ resource "aws_api_gateway_integration" "generate_response_options_integration" {
   resource_id = aws_api_gateway_resource.generate_response_resource.id
   http_method = aws_api_gateway_method.generate_response_options.http_method
   type        = "MOCK"
-  
+
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
@@ -152,7 +152,7 @@ resource "aws_api_gateway_integration" "text_to_speech_options_integration" {
   resource_id = aws_api_gateway_resource.text_to_speech_resource.id
   http_method = aws_api_gateway_method.text_to_speech_options.http_method
   type        = "MOCK"
-  
+
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
@@ -164,7 +164,7 @@ resource "aws_api_gateway_method_response" "enhance_prompt_options_response" {
   resource_id = aws_api_gateway_resource.enhance_prompt_resource.id
   http_method = aws_api_gateway_method.enhance_prompt_options.http_method
   status_code = "200"
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = true
     "method.response.header.Access-Control-Allow-Methods" = true
@@ -177,7 +177,7 @@ resource "aws_api_gateway_method_response" "generate_response_options_response" 
   resource_id = aws_api_gateway_resource.generate_response_resource.id
   http_method = aws_api_gateway_method.generate_response_options.http_method
   status_code = "200"
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = true
     "method.response.header.Access-Control-Allow-Methods" = true
@@ -190,7 +190,7 @@ resource "aws_api_gateway_method_response" "text_to_speech_options_response" {
   resource_id = aws_api_gateway_resource.text_to_speech_resource.id
   http_method = aws_api_gateway_method.text_to_speech_options.http_method
   status_code = "200"
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = true
     "method.response.header.Access-Control-Allow-Methods" = true
@@ -204,7 +204,7 @@ resource "aws_api_gateway_integration_response" "enhance_prompt_options_integrat
   resource_id = aws_api_gateway_resource.enhance_prompt_resource.id
   http_method = aws_api_gateway_method.enhance_prompt_options.http_method
   status_code = aws_api_gateway_method_response.enhance_prompt_options_response.status_code
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'"
@@ -217,7 +217,7 @@ resource "aws_api_gateway_integration_response" "generate_response_options_integ
   resource_id = aws_api_gateway_resource.generate_response_resource.id
   http_method = aws_api_gateway_method.generate_response_options.http_method
   status_code = aws_api_gateway_method_response.generate_response_options_response.status_code
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'"
@@ -230,7 +230,7 @@ resource "aws_api_gateway_integration_response" "text_to_speech_options_integrat
   resource_id = aws_api_gateway_resource.text_to_speech_resource.id
   http_method = aws_api_gateway_method.text_to_speech_options.http_method
   status_code = aws_api_gateway_method_response.text_to_speech_options_response.status_code
-  
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'"
@@ -241,7 +241,7 @@ resource "aws_api_gateway_integration_response" "text_to_speech_options_integrat
 # Deploy the API Gateway
 resource "aws_api_gateway_deployment" "scizor_ai_deployment" {
   rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
-  
+
   # This triggers a new deployment every time the Lambda integration changes.
   triggers = {
     redeployment = sha1(jsonencode([

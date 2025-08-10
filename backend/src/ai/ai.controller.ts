@@ -45,15 +45,19 @@ export class AiController {
     
     try {
       const result = await this.aiService.enhancePrompt(enhancePromptDto);
-      
-      // Log the text operation to Firestore
-      const textData: CreateTextDto = {
-        user_id: enhancePromptDto.user_id,
-        action_type: ActionType.ENHANCE,
-        text: enhancePromptDto.prompt,
-      };
-      await this.firestoreService.addTextDocument(textData);
-      
+
+      // Try to log the text operation to Firestore (do not fail the request if logging fails)
+      try {
+        const textData: CreateTextDto = {
+          user_id: enhancePromptDto.user_id,
+          action_type: ActionType.ENHANCE,
+          text: enhancePromptDto.prompt,
+        };
+        await this.firestoreService.addTextDocument(textData);
+      } catch (logError: any) {
+        this.logger.warn(`Enhance logging skipped: ${logError?.message || 'Unknown logging error'}`);
+      }
+
       this.logger.log(`Prompt enhancement completed successfully for user: ${enhancePromptDto.user_id}`);
       return {
         success: true,
@@ -90,14 +94,18 @@ export class AiController {
     
     try {
       const result = await this.aiService.generateResponse(generateResponseDto);
-      
-      // Log the text operation to Firestore
-      const textData: CreateTextDto = {
-        user_id: generateResponseDto.user_id,
-        action_type: ActionType.RESPOND,
-        text: generateResponseDto.content,
-      };
-      await this.firestoreService.addTextDocument(textData);
+
+      // Try to log the text operation to Firestore (do not fail the request if logging fails)
+      try {
+        const textData: CreateTextDto = {
+          user_id: generateResponseDto.user_id,
+          action_type: ActionType.RESPOND,
+          text: generateResponseDto.content,
+        };
+        await this.firestoreService.addTextDocument(textData);
+      } catch (logError: any) {
+        this.logger.warn(`Generate logging skipped: ${logError?.message || 'Unknown logging error'}`);
+      }
       
       this.logger.log(`Response generation completed successfully for user: ${generateResponseDto.user_id}`);
       return {
@@ -137,13 +145,17 @@ export class AiController {
     try {
       const result = await this.aiService.textToSpeech(textToSpeechDto);
       
-      // Log the text operation to Firestore
-      const textData: CreateTextDto = {
-        user_id: textToSpeechDto.user_id,
-        action_type: ActionType.READ,
-        text: textToSpeechDto.text,
-      };
-      await this.firestoreService.addTextDocument(textData);
+      // Try to log the text operation to Firestore (do not fail the request if logging fails)
+      try {
+        const textData: CreateTextDto = {
+          user_id: textToSpeechDto.user_id,
+          action_type: ActionType.READ,
+          text: textToSpeechDto.text,
+        };
+        await this.firestoreService.addTextDocument(textData);
+      } catch (logError: any) {
+        this.logger.warn(`TTS logging skipped: ${logError?.message || 'Unknown logging error'}`);
+      }
       
       // Set appropriate headers for audio response
       const contentType = this.getContentType(result.format);

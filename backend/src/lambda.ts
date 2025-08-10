@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Handler, Context, APIGatewayProxyEvent, APIGatewayProxyResult, Callback } from 'aws-lambda';
-import serverlessExpress from '@vendia/serverless-express';
+// Use require to avoid ESM/CJS default import interop issues in Lambda runtime
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const serverlessExpress = require('@vendia/serverless-express');
 
 let server: Handler;
 
@@ -15,8 +17,7 @@ async function bootstrap(): Promise<Handler> {
     allowedHeaders: 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
   });
   
-  // Set global prefix for API routes
-  app.setGlobalPrefix('ai');
+  // Note: controller already uses `@Controller('ai')`, so no global prefix here
   
   await app.init();
   

@@ -11,15 +11,17 @@ variable "firebase_project_id" {
   type        = string
 }
 
-variable "firebase_private_key" {
-  description = "Firebase Private Key for service account"
+variable "firebase_client_email" {
+  description = "Firebase service account client email"
   type        = string
-  sensitive   = true
+  default     = ""
 }
 
-variable "firebase_client_email" {
-  description = "Firebase Client Email for service account"
+variable "firebase_private_key" {
+  description = "Firebase service account private key (single string). Accepts raw PEM with \\n or base64 string."
   type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "aws_region" {

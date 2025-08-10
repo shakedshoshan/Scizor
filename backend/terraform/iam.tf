@@ -1,7 +1,7 @@
 # Define the IAM Role and Policy for the Lambda Function
 resource "aws_iam_role" "lambda_exec_role" {
   name = "scizor-ai-lambda-execution-role"
-  
+
   # The 'assume_role_policy' allows the Lambda service to assume this role.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

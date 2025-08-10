@@ -116,6 +116,12 @@ export class AiService {
           errorType = 'USER_NOT_FOUND';
         } else if (result.message.includes('Insufficient tokens')) {
           errorType = 'INSUFFICIENT_TOKENS';
+        } else if (
+          result.message.includes('Failed to deduct tokens') ||
+          result.message.includes('default credentials') ||
+          result.message.includes('Could not load the default credentials')
+        ) {
+          errorType = 'FIRESTORE_UNAVAILABLE';
         }
         
         return {
@@ -167,8 +173,12 @@ export class AiService {
             throw new BadRequestException('User account not found. Please check your user ID or create an account.');
           case 'INSUFFICIENT_TOKENS':
             throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'FIRESTORE_UNAVAILABLE':
+            this.logger.warn('Firestore unavailable; skipping token enforcement for enhancePrompt');
+            break; // proceed without enforcing tokens
           case 'SYSTEM_ERROR':
-            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+            this.logger.warn('Token system error; skipping token enforcement for enhancePrompt');
+            break;
           default:
             throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
         }
@@ -178,7 +188,7 @@ export class AiService {
       const userPrompt = this.buildEnhancementUserPrompt(prompt, context, targetAudience);
 
       const completion = await this.openai.chat.completions.create({
-        model: this.configService.get<string>('ENHANCE_PROMPT_MODEL'),
+        model: this.configService.get<string>('ENHANCE_PROMPT_MODEL') || 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -224,8 +234,12 @@ export class AiService {
             throw new BadRequestException('User account not found. Please check your user ID or create an account.');
           case 'INSUFFICIENT_TOKENS':
             throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'FIRESTORE_UNAVAILABLE':
+            this.logger.warn('Firestore unavailable; skipping token enforcement for generateResponse');
+            break;
           case 'SYSTEM_ERROR':
-            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+            this.logger.warn('Token system error; skipping token enforcement for generateResponse');
+            break;
           default:
             throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
         }
@@ -235,7 +249,7 @@ export class AiService {
       const userPrompt = this.buildResponseUserPrompt(content, context, tone, maxLength);
 
       const completion = await this.openai.chat.completions.create({
-        model: this.configService.get<string>('GENERATE_RESPONSE_MODEL'),
+        model: this.configService.get<string>('GENERATE_RESPONSE_MODEL') || 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -355,8 +369,12 @@ export class AiService {
             throw new BadRequestException('User account not found. Please check your user ID or create an account.');
           case 'INSUFFICIENT_TOKENS':
             throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'FIRESTORE_UNAVAILABLE':
+            this.logger.warn('Firestore unavailable; skipping token enforcement for textToSpeech');
+            break;
           case 'SYSTEM_ERROR':
-            throw new BadRequestException('System error occurred while processing your request. Please try again later.');
+            this.logger.warn('Token system error; skipping token enforcement for textToSpeech');
+            break;
           default:
             throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
         }

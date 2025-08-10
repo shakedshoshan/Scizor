@@ -132,6 +132,7 @@ describe('AiService', () => {
 
   describe('enhancePrompt', () => {
     const mockEnhancePromptDto: EnhancePromptDto = {
+      user_id: 'test-user-id',
       prompt: 'Write a function',
       enhancementType: EnhancementType.CODE,
       context: 'JavaScript',
@@ -249,6 +250,7 @@ describe('AiService', () => {
 
   describe('generateResponse', () => {
     const mockGenerateResponseDto: GenerateResponseDto = {
+      user_id: 'test-user-id',
       content: 'How do I implement a binary search?',
       responseType: ResponseType.EDUCATIONAL,
       context: 'Computer science fundamentals',
@@ -433,6 +435,7 @@ describe('AiService', () => {
       jest.spyOn(service['openai'].audio.speech, 'create').mockResolvedValue(mockResponse);
 
       const textToSpeechDto = {
+        user_id: 'test-user-id',
         text: 'Hello, world!',
         voice: 'alloy' as any,
         responseFormat: 'mp3' as any,
@@ -456,6 +459,7 @@ describe('AiService', () => {
     it('should throw error for text longer than 4096 characters', async () => {
       const longText = 'a'.repeat(4097);
       const textToSpeechDto = {
+        user_id: 'test-user-id',
         text: longText,
       };
 

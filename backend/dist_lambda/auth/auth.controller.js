@@ -16,7 +16,6 @@ exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const firestore_service_1 = require("./firestore.service");
-const text_dto_1 = require("./dto/text.dto");
 const user_token_dto_1 = require("./dto/user-token.dto");
 const device_token_dto_1 = require("./dto/device-token.dto");
 let AuthController = class AuthController {
@@ -35,26 +34,6 @@ let AuthController = class AuthController {
                 data: {
                     consent_token: consentToken,
                     expires_in: 600
-                },
-            };
-        }
-        catch (error) {
-            return {
-                success: false,
-                message: error.message,
-                data: null,
-            };
-        }
-    }
-    async createTextDocument(createTextDto) {
-        try {
-            const documentId = await this.firestoreService.addTextDocument(createTextDto);
-            return {
-                success: true,
-                message: 'Text document created successfully',
-                data: {
-                    document_id: documentId,
-                    ...createTextDto,
                 },
             };
         }
@@ -156,14 +135,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "generateConsentToken", null);
-__decorate([
-    (0, common_1.Post)('text'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [text_dto_1.CreateTextDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "createTextDocument", null);
 __decorate([
     (0, common_1.Post)('create-user-token'),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),

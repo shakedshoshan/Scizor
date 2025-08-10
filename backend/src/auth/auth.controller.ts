@@ -60,32 +60,7 @@ export class AuthController {
     }
   }
 
-  /**
-   * POST /auth/text
-   * Create a new text document in Firestore
-   */
-  @Post('text')
-  @HttpCode(HttpStatus.CREATED)
-  async createTextDocument(@Body() createTextDto: CreateTextDto) {
-    try {
-      const documentId = await this.firestoreService.addTextDocument(createTextDto);
-      
-      return {
-        success: true,
-        message: 'Text document created successfully',
-        data: {
-          document_id: documentId,
-          ...createTextDto,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data: null,
-      };
-    }
-  }
+
 
   /**
    * POST /auth/user

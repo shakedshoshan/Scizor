@@ -1,6 +1,5 @@
 import { AuthService } from './auth.service';
 import { FirestoreService } from './firestore.service';
-import { CreateTextDto } from './dto/text.dto';
 import { CreateUserTokenDto } from './dto/user-token.dto';
 import { DeviceTokenExchangeDto, DeviceTokenRefreshDto } from './dto/device-token.dto';
 export declare class AuthController {
@@ -17,20 +16,6 @@ export declare class AuthController {
         data: {
             consent_token: string;
             expires_in: number;
-        };
-    } | {
-        success: boolean;
-        message: any;
-        data: null;
-    }>;
-    createTextDocument(createTextDto: CreateTextDto): Promise<{
-        success: boolean;
-        message: string;
-        data: {
-            user_id: string;
-            action_type: import("./dto/text.dto").ActionType;
-            text: string;
-            document_id: string;
         };
     } | {
         success: boolean;

@@ -21,7 +21,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Additional policy for enhanced logging and monitoring
+# Additional policy for enhanced monitoring (X-Ray). CloudWatch Logs are already covered by the managed policy above.
 resource "aws_iam_role_policy" "lambda_logging_policy" {
   name = "scizor-ai-lambda-logging-policy"
   role = aws_iam_role.lambda_exec_role.id
@@ -29,15 +29,6 @@ resource "aws_iam_role_policy" "lambda_logging_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      },
       {
         Effect = "Allow"
         Action = [

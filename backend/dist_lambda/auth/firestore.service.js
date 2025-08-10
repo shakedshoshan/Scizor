@@ -22,15 +22,28 @@ let FirestoreService = FirestoreService_1 = class FirestoreService {
         this.configService = configService;
     }
     formatPrivateKey(privateKeyRaw) {
-        let privateKey = privateKeyRaw.trim();
+        if (!privateKeyRaw) {
+            throw new Error('Private key is empty');
+        }
+        let privateKey = privateKeyRaw.trim().replace(/^"|"$/g, '');
         if (privateKey.includes('\\n')) {
             privateKey = privateKey.replace(/\\n/g, '\n');
         }
+        privateKey = privateKey.replace(/\r\n/g, '\n');
         if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
             throw new Error('Private key must start with -----BEGIN PRIVATE KEY-----');
         }
-        if (!privateKey.endsWith('-----END PRIVATE KEY-----')) {
-            throw new Error('Private key must end with -----END PRIVATE KEY-----');
+        if (privateKey.endsWith('-----END PRIVATE KEY-----')) {
+            privateKey = privateKey + '\n';
+        }
+        else if (!privateKey.endsWith('-----END PRIVATE KEY-----\n')) {
+            const trimmed = privateKey.replace(/\s+$/g, '');
+            if (trimmed.endsWith('-----END PRIVATE KEY-----')) {
+                privateKey = trimmed + '\n';
+            }
+            else {
+                throw new Error('Private key must end with -----END PRIVATE KEY-----');
+            }
         }
         return privateKey;
     }

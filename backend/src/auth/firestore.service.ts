@@ -29,21 +29,39 @@ export class FirestoreService implements OnModuleInit {
    * Helper method to properly format Firebase private key
    */
   private formatPrivateKey(privateKeyRaw: string): string {
-    let privateKey = privateKeyRaw.trim();
-    
+    if (!privateKeyRaw) {
+      throw new Error('Private key is empty');
+    }
+
+    // Remove wrapping quotes if present (some env setups add them)
+    let privateKey = privateKeyRaw.trim().replace(/^"|"$/g, '');
+
     // If the key contains literal \n, replace them with actual newlines
     if (privateKey.includes('\\n')) {
       privateKey = privateKey.replace(/\\n/g, '\n');
     }
-    
-    // Ensure the key starts and ends with proper PEM format
+
+    // Normalize Windows line endings just in case
+    privateKey = privateKey.replace(/\r\n/g, '\n');
+
+    // Ensure the key starts with proper PEM header
     if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
       throw new Error('Private key must start with -----BEGIN PRIVATE KEY-----');
     }
-    if (!privateKey.endsWith('-----END PRIVATE KEY-----\n')) {
-      throw new Error('Private key must end with -----END PRIVATE KEY-----\n');
+
+    // Ensure it ends with proper PEM footer; allow with or without trailing newline
+    if (privateKey.endsWith('-----END PRIVATE KEY-----')) {
+      privateKey = privateKey + '\n';
+    } else if (!privateKey.endsWith('-----END PRIVATE KEY-----\n')) {
+      // Some providers add extra whitespace; try to trim footer area once more
+      const trimmed = privateKey.replace(/\s+$/g, '');
+      if (trimmed.endsWith('-----END PRIVATE KEY-----')) {
+        privateKey = trimmed + '\n';
+      } else {
+        throw new Error('Private key must end with -----END PRIVATE KEY-----');
+      }
     }
-    
+
     return privateKey;
   }
 

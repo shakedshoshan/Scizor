@@ -29,16 +29,17 @@ class EnhancePromptWorker(QThread):
     error = pyqtSignal(str)      # Error message
     finished = pyqtSignal()      # Thread finished
     
-    def __init__(self, service: EnhancePromptService, prompt: str):
+    def __init__(self, service: EnhancePromptService, prompt: str, user_id: str):
         super().__init__()
         self.service = service
         self.prompt = prompt
-        
+        self.user_id = user_id
     def run(self):
         """Run the enhancement in background thread"""
         try:
             result = self.service.enhance_prompt(
-                self.prompt,
+                user_id=self.user_id,
+                prompt=self.prompt,
             )
             self.enhanced.emit(result)
         except Exception as e:
@@ -149,8 +150,9 @@ class EnhancePromptPanel(QGroupBox):
     prompt_enhanced = pyqtSignal(dict)  # Enhanced prompt result
     error_occurred = pyqtSignal(str)    # Error message
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, user_id: str = None):
         super().__init__("🤖 AI Prompt Enhancer", parent)
+        self.user_id = user_id
         self.enhance_service = EnhancePromptService()
         self.worker = None
         self.setup_ui()
@@ -307,7 +309,18 @@ class EnhancePromptPanel(QGroupBox):
             QMessageBox.warning(self, "Empty Prompt", "Please enter a prompt to enhance.")
             return
             
-        
+        # Ensure we have a user_id; try to fetch if missing
+        if not self.user_id:
+            try:
+                from auth.auth_checker import get_authenticated_user
+                user_info = get_authenticated_user()
+                self.user_id = user_info.get('user_id') if user_info else None
+            except Exception:
+                self.user_id = None
+
+        if not self.user_id:
+            QMessageBox.critical(self, "Authentication Required", "User ID is missing. Please authenticate first.")
+            return
         
         # Disable UI during processing
         self.set_processing_state(True)
@@ -316,6 +329,7 @@ class EnhancePromptPanel(QGroupBox):
         self.worker = EnhancePromptWorker(
             self.enhance_service,
             prompt,
+            user_id=self.user_id,
         )
         
         self.worker.enhanced.connect(self.on_enhancement_complete)

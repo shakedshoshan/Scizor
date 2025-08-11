@@ -19,9 +19,10 @@ from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 class MainWindow(QMainWindow):
     """Main window class with all UI components"""
     
-    def __init__(self):
+    def __init__(self, user_id: str = None):
         """Initialize the main window"""
         super().__init__()
+        self.user_id = user_id
         self.current_settings = self.load_settings_from_database()
         self.init_ui()
         self.setup_layout()
@@ -62,8 +63,8 @@ class MainWindow(QMainWindow):
         # Create feature components
         self.header = HeaderPanel()
         self.clipboard_panel = ClipboardPanel()
-        self.enhance_prompt_panel = EnhancePromptPanel()
-        self.generate_response_panel = GenerateResponsePanel()
+        self.enhance_prompt_panel = EnhancePromptPanel(user_id=self.user_id)
+        self.generate_response_panel = GenerateResponsePanel(user_id=self.user_id)
         self.notes_panel = NotesPanel()
         
         # Create main vertical splitter
@@ -158,7 +159,7 @@ class MainWindow(QMainWindow):
         """Open the expanded dashboard window"""
         try:
             from .expend_window import ExpandedWindow
-            self.expanded_window = ExpandedWindow(self)
+            self.expanded_window = ExpandedWindow(self, user_id=self.user_id)
             self.expanded_window.show()
             self.expanded_window.raise_()
             self.expanded_window.activateWindow()

@@ -5,9 +5,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const base = process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.DEV_URL;
     const url = base || 'http://localhost:5000';
-    
-    // Forward the request to the backend
-    const response = await fetch(`${url}/auth/consent-token`, {
+
+    const response = await fetch(`${url}/auth/create-user-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -15,17 +14,22 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json().catch(() => ({ success: false, message: 'Unexpected backend response', data: null }));
+    // Attempt to parse backend response as JSON regardless of status
+    const data = await response
+      .json()
+      .catch(() => ({ success: false, message: 'Unexpected backend response', data: null }));
+
+    // Normalize response to consistent shape and preserve status
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Error generating consent token:', error);
+    console.error('Error forwarding create-user-token:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to generate consent token',
-        data: null 
+      {
+        success: false,
+        message: 'Failed to create user token',
+        data: null,
       },
       { status: 500 }
     );
   }
-} 
+}

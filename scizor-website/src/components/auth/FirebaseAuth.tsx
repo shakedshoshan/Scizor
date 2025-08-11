@@ -4,7 +4,7 @@ import React from 'react';
 import { getAuth, signOut } from 'firebase/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import FirebaseUIWrapper from './FirebaseUIWrapper';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 
 // FirebaseUI config
 const uiConfig = {
@@ -68,15 +68,11 @@ const FirebaseAuth: React.FC = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome!</h2>
           <div className="mb-4">
-            {user.photoURL && (
-              <Image
-                src={user.photoURL}
-                alt="Profile"
-                width={64}
-                height={64}
-                className="w-16 h-16 rounded-full mx-auto mb-2"
-              />
-            )}
+            <UserAvatar 
+              user={user} 
+              size="lg" 
+              className="mx-auto mb-2" 
+            />
             <p className="text-gray-700">{user.displayName || user.email}</p>
           </div>
           <button

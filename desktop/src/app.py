@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from ui.main_window import MainWindow
+from auth.auth_checker import get_authenticated_user
 
 
 class ScizorApp:
@@ -61,8 +62,15 @@ class ScizorApp:
         
         # Set High DPI properties (Qt6 handles this automatically)
         
-        # Create and show main window
-        self.main_window = MainWindow()
+        # Resolve authenticated user and pass user_id to the UI
+        try:
+            user_info = get_authenticated_user()
+            user_id = user_info.get('user_id') if user_info else None
+        except Exception:
+            user_id = None
+
+        # Create and show main window with user context
+        self.main_window = MainWindow(user_id=user_id)
         self.main_window.show()
         
         # Start the event loop

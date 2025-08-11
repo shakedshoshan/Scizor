@@ -122,7 +122,7 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
 
 class DeviceAuthManager(QObject):
     """
-    Manages device flow authentication for the desktop application
+    Manages device flow authentication for the desktop application with PKCE
     """
     
     # Signals
@@ -140,7 +140,7 @@ class DeviceAuthManager(QObject):
         self.redirect_uri = "http://localhost:8080/callback"
         self.auth_server_url = "http://localhost:3000"  # Your website URL
         self.backend_url = "http://localhost:5000"  # Your backend URL
-        self.jwt_secret = "your-secret-key"  # Should match backend JWT secret
+        self.jwt_secret = os.getenv('JWT_SECRET', 'your-secret-key')  # Should match backend JWT secret if verifying
         
         # PKCE parameters
         self.code_verifier = None
@@ -163,24 +163,21 @@ class DeviceAuthManager(QObject):
         self.auth_error.connect(self._handle_auth_error)
 
     def verify_consent_token(self, consent_token: str) -> Optional[Dict[str, Any]]:
-        """Verify and decode JWT consent token"""
+        """Decode JWT consent token without verifying signature (backend will verify on exchange)"""
         try:
-            # Decode the JWT token without verification for now
-            # In production, you should verify the signature
-            decoded = jwt.decode(consent_token, self.jwt_secret, algorithms=['HS256'])
-            
+            # Decode without signature verification; do not trust this content for security decisions
+            decoded = jwt.decode(consent_token, options={"verify_signature": False, "verify_exp": False})
             if decoded.get('type') != 'consent':
                 raise ValueError('Invalid token type')
-            
             return decoded
         except Exception as e:
-            print(f"Error verifying consent token: {e}")
+            print(f"Error decoding consent token: {e}")
             return None
 
     def process_consent_token(self, consent_token: str) -> bool:
         """Process JWT consent token and store user information"""
         try:
-            # Verify and decode the consent token
+            # Decode the consent token (no verification here)
             decoded = self.verify_consent_token(consent_token)
             if not decoded:
                 self.auth_error.emit("Invalid consent token")
@@ -190,10 +187,17 @@ class DeviceAuthManager(QObject):
             user_id = decoded.get('userId')
             user_email = decoded.get('userEmail')
             user_name = decoded.get('userName')
+            code_challenge = decoded.get('codeChallenge')
             
             if not user_id or not user_email:
                 self.auth_error.emit("Invalid user information in consent token")
                 return False
+            
+            # Validate PKCE challenge if present
+            if code_challenge and self.code_challenge:
+                if code_challenge != self.code_challenge:
+                    self.auth_error.emit("PKCE challenge mismatch")
+                    return False
             
             # Store user information in database
             self.db.save_user_info(
@@ -204,7 +208,7 @@ class DeviceAuthManager(QObject):
             
             print(f"✅ User information stored: {user_id} ({user_email})")
             
-            # Now exchange the consent token for access tokens
+            # Now exchange the consent token for access tokens (backend will verify signature and expiry)
             return self._exchange_consent_token_for_tokens(consent_token)
             
         except Exception as e:
@@ -213,7 +217,7 @@ class DeviceAuthManager(QObject):
             return False
 
     def _exchange_consent_token_for_tokens(self, consent_token: str) -> bool:
-        """Exchange consent token for access tokens"""
+        """Exchange consent token for access tokens with PKCE validation"""
         try:
             # Make request to backend to exchange consent token for tokens
             exchange_data = {
@@ -222,44 +226,53 @@ class DeviceAuthManager(QObject):
                 'redirect_uri': self.redirect_uri
             }
             
+            print(f"🔍 Exchanging consent token with PKCE validation...")
+            print(f"  Code verifier: {str(self.code_verifier)[:20]}...")
+            print(f"  Redirect URI: {self.redirect_uri}")
+            
             response = requests.post(
                 f"{self.backend_url}/auth/device/token",
                 json=exchange_data,
                 timeout=30
             )
             
-            if response.status_code == 200:
-                token_data = response.json()
+            # Try to parse JSON regardless of status
+            try:
+                payload = response.json()
+            except Exception:
+                payload = None
+            
+            if response.status_code == 200 and payload and payload.get('success'):
+                token_data = payload
+                # Store tokens
+                self.access_token = token_data['data']['access_token']
+                self.refresh_token = token_data['data']['refresh_token']
+                self.user_id = token_data['data']['user_id']
+                self.token_expiry = token_data['data']['expires_in']
                 
-                if token_data.get('success'):
-                    # Store tokens
-                    self.access_token = token_data['data']['access_token']
-                    self.refresh_token = token_data['data']['refresh_token']
-                    self.user_id = token_data['data']['user_id']
-                    self.token_expiry = token_data['data']['expires_in']
-                    
-                    # Update user tokens in database
-                    self.db.update_user_tokens(
-                        user_id=self.user_id,
-                        access_token=self.access_token,
-                        refresh_token=self.refresh_token,
-                        token_expiry=self.token_expiry
-                    )
-                    
-                    # Save tokens to file
-                    self._save_tokens()
-                    
-                    # Emit success signal
-                    self.token_received.emit(token_data['data'])
-                    self.auth_completed.emit(True)
-                    return True
-                else:
-                    error_msg = token_data.get('message', 'Token exchange failed')
-                    self.token_error.emit(error_msg)
-                    self.auth_completed.emit(False)
-                    return False
+                # Update user tokens in database
+                self.db.update_user_tokens(
+                    user_id=self.user_id,
+                    access_token=self.access_token,
+                    refresh_token=self.refresh_token,
+                    token_expiry=self.token_expiry
+                )
+                
+                # Save tokens to file
+                self._save_tokens()
+                
+                print("✅ Token exchange successful with PKCE validation")
+                
+                # Emit success signal
+                self.token_received.emit(token_data['data'])
+                self.auth_completed.emit(True)
+                return True
             else:
-                error_msg = f"Token exchange failed: {response.status_code}"
+                # Build rich error message
+                server_msg = None
+                if payload is not None:
+                    server_msg = payload.get('message') or payload.get('error')
+                error_msg = f"Token exchange failed ({response.status_code}){': ' + server_msg if server_msg else ''}"
                 self.token_error.emit(error_msg)
                 self.auth_completed.emit(False)
                 return False
@@ -314,7 +327,7 @@ class DeviceAuthManager(QObject):
     
     def _generate_pkce_params(self):
         """Generate PKCE code verifier and challenge"""
-        # Generate a random code verifier
+        # Generate a random code verifier (32-128 characters)
         self.code_verifier = base64.urlsafe_b64encode(
             secrets.token_bytes(32)
         ).decode('utf-8').rstrip('=')
@@ -322,6 +335,10 @@ class DeviceAuthManager(QObject):
         # Generate code challenge using SHA256
         challenge_bytes = hashlib.sha256(self.code_verifier.encode('utf-8')).digest()
         self.code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip('=')
+        
+        print(f"🔍 PKCE parameters generated:")
+        print(f"  Code verifier: {self.code_verifier[:20]}...")
+        print(f"  Code challenge: {self.code_challenge[:20]}...")
     
     def _check_connection(self):
         """Check connection to backend using health endpoint"""
@@ -341,7 +358,7 @@ class DeviceAuthManager(QObject):
             return False
     
     def start_auth_flow(self):
-        """Start the device flow authentication process"""
+        """Start the device flow authentication process with PKCE"""
         try:
             # Check backend connection first
             if not self._check_connection():
@@ -350,9 +367,8 @@ class DeviceAuthManager(QObject):
             
             # Generate PKCE parameters
             self._generate_pkce_params()
-            print(f"Code verifier: {self.code_verifier}")
             
-            # Construct authorization URL - navigate to the main auth page
+            # Construct authorization URL with PKCE parameters
             auth_params = {
                 'client_id': self.client_id,
                 'redirect_uri': self.redirect_uri,
@@ -363,9 +379,11 @@ class DeviceAuthManager(QObject):
                 'state': secrets.token_urlsafe(16)
             }
             
-            # Use the main auth page instead of device-specific endpoint
+            # Use the main auth page for device authentication
             auth_url = f"{self.auth_server_url}/auth?{urlencode(auth_params)}"
-            print(f"Auth URL: {auth_url}")
+            print(f"🔍 Starting PKCE authentication flow:")
+            print(f"  Auth URL: {auth_url}")
+            print(f"  Code challenge: {self.code_challenge[:20]}...")
             
             # Open browser for authentication
             webbrowser.open(auth_url)
@@ -377,7 +395,7 @@ class DeviceAuthManager(QObject):
             return False
     
     def _exchange_code_for_tokens(self, auth_code: str):
-        """Exchange authorization code for tokens"""
+        """Exchange authorization code for tokens (legacy flow)"""
         try:
             # Make request to backend to exchange code for tokens
             exchange_data = {
@@ -421,13 +439,9 @@ class DeviceAuthManager(QObject):
             error_msg = f"Error exchanging code for tokens: {str(e)}"
             self.token_error.emit(error_msg)
             self.auth_completed.emit(False)
-        finally:
-            # Stop local server
-            # self._stop_local_server() # This line is removed as per the new_code
-            pass # No local server to stop here
     
     def exchange_authorization_code(self, auth_code: str):
-        """Manually exchange authorization code for tokens"""
+        """Manually exchange authorization code for tokens (legacy support)"""
         try:
             # Make request to backend to exchange code for tokens
             exchange_data = {
@@ -471,7 +485,7 @@ class DeviceAuthManager(QObject):
                 return False
                 
         except Exception as e:
-            error_msg = f"Error exchanging code for tokens: {str(e)}"
+            error_msg = f"Error exchanging authorization code for tokens: {str(e)}"
             self.token_error.emit(error_msg)
             self.auth_completed.emit(False)
             return False
@@ -497,7 +511,6 @@ class DeviceAuthManager(QObject):
     def _handle_auth_error(self, error: str):
         """Handle authentication errors"""
         print(f"Authentication error: {error}")
-        # self._stop_local_server() # This line is removed as per the new_code
         self.auth_completed.emit(False)
     
     def is_authenticated(self) -> bool:
@@ -579,10 +592,6 @@ class DeviceAuthManager(QObject):
             print("✅ All users cleared from database")
         except Exception as e:
             print(f"Error clearing users from database: {e}")
-        
-        # Stop local server if running
-        # self._stop_local_server() # This line is removed as per the new_code
-        pass # No local server to stop here
     
     def get_user_info(self) -> Optional[Dict[str, Any]]:
         """Get current user information"""

@@ -57,12 +57,20 @@ class EnhancePromptService:
             raise ValueError("Prompt cannot be empty")
             
         if not user_id or not user_id.strip():
-            raise ValueError("User ID cannot be empty")
+            # Try to resolve user_id from authenticated user
+            try:
+                from auth.auth_checker import get_authenticated_user
+                user_info = get_authenticated_user()
+                user_id = (user_info or {}).get('user_id')
+            except Exception:
+                user_id = None
+            if not user_id or not str(user_id).strip():
+                raise ValueError("User ID cannot be empty")
             
         # Prepare request payload
         payload = {
             "prompt": prompt.strip(),
-            "user_id": user_id.strip(),
+            "user_id": str(user_id).strip(),
         }
             
         try:

@@ -13,6 +13,7 @@ interface UserAvatarProps {
 const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md', className = '' }) => {
   const [imageError, setImageError] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(null);
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   useEffect(() => {
     // Get the photo URL from the user's provider data
@@ -43,6 +44,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md', className = 
     const url = getPhotoURL();
     setPhotoURL(url);
     setImageError(false);
+    setIsImageLoading(true);
   }, [user]);
 
   const sizeClasses = {
@@ -84,22 +86,54 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md', className = 
     return colors[index];
   };
 
-  if (photoURL && !imageError) {
+  const handleImageLoad = () => {
+    setIsImageLoading(false);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setIsImageLoading(false);
+  };
+
+  // Show loading state while image is loading
+  if (photoURL && !imageError && isImageLoading) {
     return (
-      <Image
-        src={photoURL}
-        alt={`${user.displayName || user.email || 'User'} avatar`}
-        width={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
-        height={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
-        className={`${sizeClasses[size]} rounded-full object-cover ${className}`}
-        onError={() => setImageError(true)}
-      />
+      <div className={`${sizeClasses[size]} rounded-full bg-gray-200 animate-pulse flex items-center justify-center ${className}`}>
+        <div className="w-1/2 h-1/2 bg-gray-300 rounded animate-pulse"></div>
+      </div>
     );
   }
 
+  // Show image if available and no errors
+  if (photoURL && !imageError) {
+    return (
+      <div className="relative">
+        <Image
+          src={photoURL}
+          alt={`${user.displayName || user.email || 'User'} avatar`}
+          width={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
+          height={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
+          className={`${sizeClasses[size]} rounded-full object-cover ${className}`}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          priority={size === 'lg' || size === 'xl'} // Prioritize larger images
+          sizes={`${size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}px`}
+        />
+        {/* Loading indicator overlay */}
+        {isImageLoading && (
+          <div className={`absolute inset-0 ${sizeClasses[size]} rounded-full bg-gray-200 animate-pulse flex items-center justify-center`}>
+            <div className="w-1/2 h-1/2 bg-gray-300 rounded animate-pulse"></div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback to initials avatar
   return (
     <div
       className={`${sizeClasses[size]} rounded-full ${getBackgroundColor()} flex items-center justify-center text-white font-semibold ${className}`}
+      title={user.displayName || user.email || 'User'}
     >
       {getInitials()}
     </div>

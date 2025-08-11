@@ -10,14 +10,10 @@ interface CreateUserTokenPayload {
   user_id: string;
 }
 
-
-
 export const useCreateUserToken = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  
-  const url = process.env.NODE_ENV === 'production' ? process.env.PROD_URL : process.env.DEV_URL;
 
   const createUserToken = async (userId: string): Promise<CreateUserTokenResponse> => {
     setLoading(true);
@@ -25,44 +21,36 @@ export const useCreateUserToken = () => {
     setToken(null);
 
     try {
-      const payload: CreateUserTokenPayload = {
-        user_id: userId
-      };
+      const payload: CreateUserTokenPayload = { user_id: userId };
 
-      
-
-      const response = await fetch(`${url}/auth/create-user-token`, {
+      // Use Next.js API route to avoid CORS/backend URL coupling in the client
+      const response = await fetch(`/api/auth/create-user-token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      console.log('Response status:', response.status);
+      // Try to parse JSON even for non-2xx
+      const data = await response.json().catch(() => ({ success: false, message: 'Unexpected response' }));
 
+      // Backend returns shape { success, message, data }
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        // If user already exists, we consider this a non-fatal condition and return success
+        const msg = (data?.message || '').toString().toLowerCase();
+        if (msg.includes('already exists')) {
+          return { success: true };
+        }
+        throw new Error(data?.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('Token created successfully:', data);
-
-      setToken(data.token);
-      return {
-        success: true,
-        token: data.token
-      };
-
+      // Success
+      setToken(data?.data?.token ?? null);
+      return { success: true, token: data?.data?.token };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       console.error('Failed to create user token:', errorMessage);
       setError(errorMessage);
-      return {
-        success: false,
-        error: errorMessage
-      };
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -79,6 +67,6 @@ export const useCreateUserToken = () => {
     loading,
     error,
     token,
-    reset
+    reset,
   };
 };

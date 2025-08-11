@@ -57,12 +57,20 @@ class GenerateResponseService:
             raise ValueError("content cannot be empty")
             
         if not user_id or not user_id.strip():
-            raise ValueError("User ID cannot be empty")
+            # Try to resolve user_id from authenticated user
+            try:
+                from auth.auth_checker import get_authenticated_user
+                user_info = get_authenticated_user()
+                user_id = (user_info or {}).get('user_id')
+            except Exception:
+                user_id = None
+            if not user_id or not str(user_id).strip():
+                raise ValueError("User ID cannot be empty")
             
         # Prepare request payload
         payload = {
             "content": content.strip(),
-            "user_id": user_id.strip(),
+            "user_id": str(user_id).strip(),
         }
             
         try:
@@ -138,7 +146,7 @@ def get_generate_response_service(base_url: str = "http://localhost:5000") -> Ge
 
 
 def generate_response(
-    prompt: str, 
+    content: str, 
     user_id: str,
     base_url: str = "http://localhost:5000",
 
@@ -157,6 +165,6 @@ def generate_response(
     """
     service = get_generate_response_service(base_url)
     return service.generate_response(
-        prompt, 
+        content, 
         user_id, 
     ) 

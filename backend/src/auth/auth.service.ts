@@ -6,42 +6,55 @@
  * - JWT token generation and validation
  * - Password hashing and verification
  * - User session management
- * - Device flow token exchange
+ * - Device flow token exchange with PKCE
  * 
  * Responsibilities:
  * - Implements authentication business logic
  * - Handles JWT token operations
  * - Manages user sessions and security
  * - Provides authentication utilities
- * - Handles device flow authentication
+ * - Handles device flow authentication with PKCE
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { DeviceTokenExchangeDto, DeviceTokenRefreshDto, DeviceTokenResponseDto } from './dto/device-token.dto';
 import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
   
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+  private readonly JWT_SECRET: string;
   private readonly JWT_EXPIRES_IN = '1h';
   private readonly REFRESH_TOKEN_EXPIRES_IN = '7d';
   private readonly CONSENT_TOKEN_EXPIRES_IN = '10m'; // 10 minutes for consent tokens
+  
+  // In-memory storage for PKCE challenges (in production, use Redis or database)
+  private readonly pkceChallenges = new Map<string, { codeVerifier: string; expiresAt: number }>();
+
+  constructor() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret === 'your-secret-key') {
+      throw new Error('JWT_SECRET environment variable must be set with a strong secret key (minimum 32 characters)');
+    }
+    this.JWT_SECRET = secret;
+  }
 
   /**
    * Generate JWT consent token for device flow
    */
-  generateConsentToken(userId: string, userEmail: string, userName?: string): string {
+  generateConsentToken(userId: string, userEmail: string, userName?: string, codeChallenge?: string): string {
     const payload = {
       userId,
       userEmail,
-      userName: userName || userEmail.split('@')[0], // Use email prefix as default name
+      userName: userName || userEmail.split('@')[0],
       type: 'consent',
+      codeChallenge, // Include code challenge for PKCE validation
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (10 * 60) // 10 minutes
     };
     
-    return jwt.sign(payload, this.JWT_SECRET);
+    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
   }
 
   /**
@@ -49,7 +62,7 @@ export class AuthService {
    */
   verifyConsentToken(token: string): any {
     try {
-      const decoded = jwt.verify(token, this.JWT_SECRET) as any;
+      const decoded = jwt.verify(token, this.JWT_SECRET, { algorithms: ['HS256'] }) as any;
       if (decoded.type !== 'consent') {
         throw new Error('Invalid token type');
       }
@@ -60,17 +73,66 @@ export class AuthService {
   }
 
   /**
-   * Exchange authorization code for tokens (device flow)
+   * Store PKCE challenge for validation (not required when comparing directly)
+   */
+  storePKCEChallenge(codeChallenge: string, codeVerifier: string): void {
+    const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
+    this.pkceChallenges.set(codeChallenge, { codeVerifier, expiresAt });
+    this.cleanupExpiredPKCEChallenges();
+  }
+
+  /**
+   * Validate PKCE: compute challenge from code_verifier and compare
+   */
+  validatePKCEChallenge(codeChallenge: string, codeVerifier: string): boolean {
+    const expectedChallenge = this.generateCodeChallenge(codeVerifier);
+    return expectedChallenge === codeChallenge;
+  }
+
+  /**
+   * Generate code challenge from code verifier (PKCE)
+   */
+  private generateCodeChallenge(codeVerifier: string): string {
+    const hash = crypto.createHash('sha256');
+    hash.update(codeVerifier);
+    return hash.digest('base64url');
+  }
+
+  /**
+   * Clean up expired PKCE challenges (only used if storePKCEChallenge is used)
+   */
+  private cleanupExpiredPKCEChallenges(): void {
+    const now = Date.now();
+    for (const [challenge, data] of this.pkceChallenges.entries()) {
+      if (now > data.expiresAt) {
+        this.pkceChallenges.delete(challenge);
+      }
+    }
+  }
+
+  /**
+   * Exchange authorization code for tokens (device flow with PKCE)
    */
   async exchangeDeviceToken(deviceTokenDto: DeviceTokenExchangeDto): Promise<DeviceTokenResponseDto> {
     try {
-      // Check if this is a consent token or authorization code
+      // Validate PKCE challenge
+      if (!deviceTokenDto.code_verifier || !deviceTokenDto.redirect_uri) {
+        throw new BadRequestException('Missing required parameters: code_verifier and redirect_uri');
+      }
+
       if (deviceTokenDto.consent_token) {
-        // Handle JWT consent token
+        // Handle JWT consent token with PKCE validation
         const decoded = this.verifyConsentToken(deviceTokenDto.consent_token);
         
         if (!decoded) {
-          throw new Error('Invalid consent token');
+          throw new UnauthorizedException('Invalid consent token');
+        }
+
+        // Validate PKCE challenge embedded in token against provided verifier
+        if (decoded.codeChallenge) {
+          if (!this.validatePKCEChallenge(decoded.codeChallenge, deviceTokenDto.code_verifier)) {
+            throw new UnauthorizedException('Invalid PKCE challenge');
+          }
         }
 
         const userId = decoded.userId;
@@ -92,7 +154,7 @@ export class AuthService {
         const userId = this.extractUserIdFromAuthCode(deviceTokenDto.authorization_code);
         
         if (!userId) {
-          throw new Error('Invalid authorization code');
+          throw new UnauthorizedException('Invalid authorization code');
         }
 
         // Generate tokens
@@ -108,10 +170,13 @@ export class AuthService {
           token_type: 'Bearer'
         };
       } else {
-        throw new Error('No consent token or authorization code provided');
+        throw new BadRequestException('No consent token or authorization code provided');
       }
     } catch (error) {
-      throw new Error(`Token exchange failed: ${error.message}`);
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new UnauthorizedException(`Token exchange failed: ${error.message}`);
     }
   }
 
@@ -121,11 +186,11 @@ export class AuthService {
   async refreshDeviceToken(refreshDto: DeviceTokenRefreshDto): Promise<Partial<DeviceTokenResponseDto>> {
     try {
       // Verify refresh token
-      const payload = jwt.verify(refreshDto.refresh_token, this.JWT_SECRET) as any;
+      const payload = jwt.verify(refreshDto.refresh_token, this.JWT_SECRET, { algorithms: ['HS256'] }) as any;
       const userId = payload.userId;
 
-      if (!userId) {
-        throw new Error('Invalid refresh token');
+      if (!userId || payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid refresh token');
       }
 
       // Generate new access token
@@ -138,7 +203,7 @@ export class AuthService {
         token_type: 'Bearer'
       };
     } catch (error) {
-      throw new Error(`Token refresh failed: ${error.message}`);
+      throw new UnauthorizedException(`Token refresh failed: ${error.message}`);
     }
   }
 
@@ -153,7 +218,7 @@ export class AuthService {
       exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
     };
     
-    return jwt.sign(payload, this.JWT_SECRET);
+    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
   }
 
   /**
@@ -167,7 +232,7 @@ export class AuthService {
       exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days
     };
     
-    return jwt.sign(payload, this.JWT_SECRET);
+    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
   }
 
   /**

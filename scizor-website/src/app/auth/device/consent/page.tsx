@@ -83,9 +83,9 @@ const DeviceConsentContent: React.FC = () => {
     }
 
     try {
-      console.log('🔍 Generating JWT consent token...');
+      console.log('🔍 Generating JWT consent token with PKCE challenge...');
       
-      // Generate JWT consent token by calling backend
+      // Generate JWT consent token by calling backend with PKCE challenge
       const response = await fetch('/api/auth/consent-token', {
         method: 'POST',
         headers: {
@@ -94,18 +94,20 @@ const DeviceConsentContent: React.FC = () => {
         body: JSON.stringify({
           userId: authParams.userId,
           userEmail: userEmail,
-          userName: userEmail.split('@')[0] // Use email prefix as default name
+          userName: userEmail.split('@')[0], // Use email prefix as default name
+          codeChallenge: authParams.codeChallenge // Include PKCE challenge
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate consent token');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to generate consent token' }));
+        throw new Error(errorData.message || 'Failed to generate consent token');
       }
 
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ Generated consent token:', result.data.consent_token);
+        console.log('✅ Generated consent token with PKCE challenge:', result.data.consent_token);
         setConsentToken(result.data.consent_token);
         setShowConsentToken(true);
         setError(''); // Clear any previous errors
@@ -117,7 +119,7 @@ const DeviceConsentContent: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Error in handleGrantPermission:', error);
-      setError('Failed to generate consent token');
+      setError(error instanceof Error ? error.message : 'Failed to generate consent token');
       setIsLoading(false);
     }
   };
@@ -241,6 +243,11 @@ const DeviceConsentContent: React.FC = () => {
           <p className="text-sm text-gray-600">
             <strong>Signed in as:</strong> {userEmail}
           </p>
+          {authParams.codeChallenge && (
+            <p className="text-xs text-gray-500 mt-2">
+              <strong>PKCE Challenge:</strong> {authParams.codeChallenge.substring(0, 20)}...
+            </p>
+          )}
         </div>
 
         {error && (
@@ -252,7 +259,7 @@ const DeviceConsentContent: React.FC = () => {
         {showConsentToken && (
           <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
             <h3 className="font-semibold mb-2">✅ Authorization Successful!</h3>
-            <p className="mb-3">Your consent token has been generated. Please copy it and paste it into your desktop application.</p>
+            <p className="mb-3">Your consent token has been generated with PKCE security. Please copy it and paste it into your desktop application.</p>
             <div className="bg-white p-3 border border-green-300 rounded mb-3">
               <p className="text-sm font-mono break-all">{consentToken}</p>
             </div>
@@ -306,6 +313,7 @@ const DeviceConsentContent: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             By granting permission, you allow the desktop app to access your account data.
+            This authorization uses PKCE (Proof Key for Code Exchange) for enhanced security.
             You can revoke this permission at any time in your account settings.
           </p>
         </div>

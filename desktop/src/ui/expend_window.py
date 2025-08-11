@@ -23,9 +23,10 @@ from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
 class ExpandedWindow(QMainWindow):
     """Expanded window with enhanced features for easier access"""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, user_id: str = None):
         """Initialize the expanded window"""
         super().__init__(parent)
+        self.user_id = user_id
         self.parent_window = parent
         self.setup_ui()
         self.setup_layout()
@@ -100,8 +101,8 @@ class ExpandedWindow(QMainWindow):
         
         # Create enhanced feature panels
         self.clipboard_panel = EnhancedClipboardPanel()
-        self.enhance_prompt_panel = EnhancedEnhancePromptPanel()
-        self.generate_response_panel = EnhancedGenerateResponsePanel()
+        self.enhance_prompt_panel = EnhancedEnhancePromptPanel(user_id=self.user_id)
+        self.generate_response_panel = EnhancedGenerateResponsePanel(user_id=self.user_id)
         self.notes_panel = EnhancedNotesPanel()
         
         # Create tab pages

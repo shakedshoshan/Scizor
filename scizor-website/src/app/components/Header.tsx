@@ -34,6 +34,9 @@ export default function Header() {
             <Link href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
               About
             </Link>
+            <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+              Pricing
+            </Link>
             {!loading && (
               user ? (
                 <div className="flex items-center space-x-4">
@@ -84,6 +87,9 @@ export default function Header() {
               </Link>
               <Link href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
                 About
+              </Link>
+              <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Pricing
               </Link>
               {!loading && (
                 user ? (

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Lemon Squeezy Lemon.js for checkout overlays */}
+        <Script
+          src="https://app.lemonsqueezy.com/js/lemon.js"
+          strategy="afterInteractive"
+        />
         <AuthProvider>
           {children}
         </AuthProvider>

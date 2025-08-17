@@ -1,0 +1,27 @@
+Scizor Desktop has been successfully installed!
+
+GETTING STARTED:
+1. Launch Scizor Desktop from the Start Menu or Desktop shortcut
+2. Complete the initial authentication setup
+3. Configure your preferences in the Settings window
+4. Set up your preferred hotkeys for quick access
+
+IMPORTANT NOTES:
+• The application requires internet connection for AI features
+• Your authentication data is securely stored locally
+• Hotkeys are disabled by default - enable them in Settings
+• Check for updates regularly for new features
+
+TROUBLESHOOTING:
+• If the application doesn't start, try running as administrator
+• For hotkey issues, ensure no other applications are using the same keys
+• Visit our support page for common solutions: https://scizor.com/support
+
+NEXT STEPS:
+• Join our community: https://scizor.com/community
+• Check out tutorials: https://scizor.com/tutorials
+• Contact support: support@scizor.com
+
+Thank you for choosing Scizor Desktop!
+
+You can now launch the application or close this installer.

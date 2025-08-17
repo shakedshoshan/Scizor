@@ -1,0 +1,32 @@
+Scizor Desktop License Agreement
+
+Copyright (c) 2024 Scizor. All rights reserved.
+
+IMPORTANT: PLEASE READ THIS SOFTWARE LICENSE AGREEMENT ("LICENSE") CAREFULLY BEFORE USING THE SCIZOR DESKTOP SOFTWARE. BY INSTALLING, COPYING, OR OTHERWISE USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS OF THIS LICENSE.
+
+1. GRANT OF LICENSE
+Subject to the terms and conditions of this License, Scizor grants you a personal, non-exclusive, non-transferable license to use the Scizor Desktop software ("Software") solely for your personal or internal business purposes.
+
+2. RESTRICTIONS
+You may not:
+- Distribute, sell, lease, rent, or sublicense the Software
+- Reverse engineer, decompile, or disassemble the Software
+- Remove or alter any proprietary notices or labels on the Software
+- Use the Software for any unlawful purpose
+
+3. OWNERSHIP
+The Software is protected by copyright and other intellectual property laws. Scizor retains all rights, title, and interest in and to the Software.
+
+4. TERMINATION
+This License is effective until terminated. Your rights under this License will terminate automatically without notice if you fail to comply with any term(s) of this License.
+
+5. DISCLAIMER OF WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+6. LIMITATION OF LIABILITY
+IN NO EVENT SHALL SCIZOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+7. GOVERNING LAW
+This License shall be governed by and construed in accordance with the laws of [Your Jurisdiction].
+
+For questions about this License, please contact: support@scizor.com

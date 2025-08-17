@@ -35,6 +35,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version='version_info.txt',
-    icon=['src\\resources\\icons\\app_icon.ico'],
+    version='C:\\Users\\shake\\Desktop\\Builds\\Scizor\\desktop\\version_info.txt',
+    icon=['C:\\Users\\shake\\Desktop\\Builds\\Scizor\\desktop\\src\\resources\\icons\\scizor_icon.ico'],
 )

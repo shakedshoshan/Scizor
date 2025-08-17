@@ -4,7 +4,7 @@
 
 resource "aws_api_gateway_rest_api" "scizor_ai_api" {
   name        = "ScizorAIApi"
-  description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, and health endpoints"
+  description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, health, auth, and payment endpoints"
 }
 
 resource "aws_api_gateway_resource" "ai_resource" {
@@ -38,10 +38,25 @@ locals {
     "refresh"           = { method = "POST", parent = "auth/device" }
   }
 
+  payment_endpoints = {
+    # /payment/new-subscriber (POST)
+    "new-subscriber" = { method = "POST", parent = "payment" }
+    # /payment/return-to-free (POST)
+    "return-to-free" = { method = "POST", parent = "payment" }
+    # /payment/monthly-renew (POST)
+    "monthly-renew"  = { method = "POST", parent = "payment" }
+  }
+
   auth_cors_enabled = [
     "create-user-token",
     "token",
     "refresh",
+  ]
+
+  payment_cors_enabled = [
+    "new-subscriber",
+    "return-to-free",
+    "monthly-renew",
   ]
 }
 
@@ -68,12 +83,25 @@ resource "aws_api_gateway_resource" "auth_device" {
   path_part   = "device"
 }
 
+resource "aws_api_gateway_resource" "payment_base" {
+  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
+  parent_id   = aws_api_gateway_rest_api.scizor_ai_api.root_resource_id
+  path_part   = "payment"
+}
+
 resource "aws_api_gateway_resource" "auth_routes" {
   for_each = {
     for k, v in local.auth_endpoints : k => v if contains(["auth", "auth/device"], v.parent)
   }
   rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
   parent_id   = each.value.parent == "auth" ? aws_api_gateway_resource.auth_base.id : aws_api_gateway_resource.auth_device.id
+  path_part   = each.key
+}
+
+resource "aws_api_gateway_resource" "payment_routes" {
+  for_each = local.payment_endpoints
+  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
+  parent_id   = aws_api_gateway_resource.payment_base.id
   path_part   = each.key
 }
 
@@ -102,6 +130,14 @@ resource "aws_api_gateway_method" "auth" {
   authorization = "NONE"
 }
 
+resource "aws_api_gateway_method" "payment" {
+  for_each     = local.payment_endpoints
+  rest_api_id  = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id  = aws_api_gateway_resource.payment_routes[each.key].id
+  http_method  = each.value.method
+  authorization = "NONE"
+}
+
 resource "aws_api_gateway_integration" "endpoint" {
   for_each                = local.endpoints
   rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
@@ -117,6 +153,16 @@ resource "aws_api_gateway_integration" "auth" {
   rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
   resource_id             = contains(keys(each.value), "child") ? aws_api_gateway_resource.auth_routes_child[each.key].id : aws_api_gateway_resource.auth_routes[each.key].id
   http_method             = aws_api_gateway_method.auth[each.key].http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
+}
+
+resource "aws_api_gateway_integration" "payment" {
+  for_each                = local.payment_endpoints
+  rest_api_id             = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id             = aws_api_gateway_resource.payment_routes[each.key].id
+  http_method             = aws_api_gateway_method.payment[each.key].http_method
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = aws_lambda_function.scizor_ai_lambda.invoke_arn
@@ -138,6 +184,14 @@ resource "aws_api_gateway_method" "auth_options" {
   for_each     = toset(local.auth_cors_enabled)
   rest_api_id  = aws_api_gateway_rest_api.scizor_ai_api.id
   resource_id  = aws_api_gateway_resource.auth_routes[each.key].id
+  http_method  = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "payment_options" {
+  for_each     = toset(local.payment_cors_enabled)
+  rest_api_id  = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id  = aws_api_gateway_resource.payment_routes[each.key].id
   http_method  = "OPTIONS"
   authorization = "NONE"
 }
@@ -166,6 +220,18 @@ resource "aws_api_gateway_integration" "auth_options_integration" {
   }
 }
 
+resource "aws_api_gateway_integration" "payment_options_integration" {
+  for_each   = toset(local.payment_cors_enabled)
+  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id = aws_api_gateway_resource.payment_routes[each.key].id
+  http_method = aws_api_gateway_method.payment_options[each.key].http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
 resource "aws_api_gateway_method_response" "options_response" {
   for_each   = toset(local.cors_enabled_endpoints)
   rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
@@ -185,6 +251,20 @@ resource "aws_api_gateway_method_response" "auth_options_response" {
   rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
   resource_id = aws_api_gateway_resource.auth_routes[each.key].id
   http_method = aws_api_gateway_method.auth_options[each.key].http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "payment_options_response" {
+  for_each   = toset(local.payment_cors_enabled)
+  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id = aws_api_gateway_resource.payment_routes[each.key].id
+  http_method = aws_api_gateway_method.payment_options[each.key].http_method
   status_code = "200"
 
   response_parameters = {
@@ -222,6 +302,20 @@ resource "aws_api_gateway_integration_response" "auth_options_integration_respon
   }
 }
 
+resource "aws_api_gateway_integration_response" "payment_options_integration_response" {
+  for_each   = toset(local.payment_cors_enabled)
+  rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
+  resource_id = aws_api_gateway_resource.payment_routes[each.key].id
+  http_method = aws_api_gateway_method.payment_options[each.key].http_method
+  status_code = aws_api_gateway_method_response.payment_options_response[each.key].status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
 #########################
 # Deployment and Stage  #
 #########################
@@ -233,7 +327,8 @@ resource "aws_api_gateway_deployment" "scizor_ai_deployment" {
     redeployment = sha1(jsonencode([
       for i in concat(
         values(aws_api_gateway_integration.endpoint),
-        values(aws_api_gateway_integration.auth)
+        values(aws_api_gateway_integration.auth),
+        values(aws_api_gateway_integration.payment)
       ) : i.id
     ]))
   }

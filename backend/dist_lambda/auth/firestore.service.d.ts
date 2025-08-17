@@ -16,6 +16,7 @@ export declare class FirestoreService implements OnModuleInit {
     getUserToken(userId: string): Promise<UserTokenDto | null>;
     updateUserToken(userId: string, updateData: UpdateUserTokenDto): Promise<UserTokenDto>;
     deductUserTokens(userId: string, cost: number): Promise<DeductTokenResultDto>;
+    getAllPremiumUsers(): Promise<UserTokenDto[]>;
     getFirestore(): admin.firestore.Firestore;
     isInitialized(): boolean;
     getInitializationStatus(): {

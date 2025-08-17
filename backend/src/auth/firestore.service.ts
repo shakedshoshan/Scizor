@@ -316,6 +316,36 @@ export class FirestoreService implements OnModuleInit {
   }
 
   /**
+   * Get all premium users for monthly renewal
+   */
+  async getAllPremiumUsers(): Promise<UserTokenDto[]> {
+    try {
+      const querySnapshot = await this.firestore
+        .collection('user_token')
+        .where('is_premium', '==', true)
+        .get();
+
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      const premiumUsers: UserTokenDto[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        premiumUsers.push({
+          user_id: data.user_id,
+          tokens: data.tokens,
+          is_premium: data.is_premium,
+        });
+      });
+
+      return premiumUsers;
+    } catch (error) {
+      throw new Error(`Failed to get premium users: ${error.message}`);
+    }
+  }
+
+  /**
    * Get Firestore instance
    */
   getFirestore(): admin.firestore.Firestore {

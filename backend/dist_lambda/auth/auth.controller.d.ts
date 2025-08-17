@@ -10,16 +10,36 @@ export declare class AuthController {
         userId: string;
         userEmail: string;
         userName?: string;
+        codeChallenge?: string;
     }): Promise<{
         success: boolean;
         message: string;
         data: {
             consent_token: string;
             expires_in: number;
+            code_challenge: string | null;
         };
     } | {
         success: boolean;
-        message: any;
+        message: string;
+        data: null;
+    }>;
+    exchangeDeviceToken(deviceTokenDto: DeviceTokenExchangeDto): Promise<{
+        success: boolean;
+        message: string;
+        data: import("./dto/device-token.dto").DeviceTokenResponseDto;
+    } | {
+        success: boolean;
+        message: string;
+        data: null;
+    }>;
+    refreshDeviceToken(refreshDto: DeviceTokenRefreshDto): Promise<{
+        success: boolean;
+        message: string;
+        data: Partial<import("./dto/device-token.dto").DeviceTokenResponseDto>;
+    } | {
+        success: boolean;
+        message: string;
         data: null;
     }>;
     createUser(createUserDto: CreateUserTokenDto): Promise<{
@@ -31,36 +51,14 @@ export declare class AuthController {
             tokens: number;
             is_premium: boolean;
         };
-    } | {
-        success: boolean;
-        message: any;
-        data: null;
     }>;
     getUserToken(userId: string): Promise<{
         success: boolean;
         message: string;
+        data: null;
+    } | {
+        success: boolean;
+        message: string;
         data: import("./dto/user-token.dto").UserTokenDto;
-    } | {
-        success: boolean;
-        message: any;
-        data: null;
-    }>;
-    exchangeDeviceToken(deviceTokenDto: DeviceTokenExchangeDto): Promise<{
-        success: boolean;
-        message: string;
-        data: import("./dto/device-token.dto").DeviceTokenResponseDto;
-    } | {
-        success: boolean;
-        message: any;
-        data: null;
-    }>;
-    refreshDeviceToken(refreshDto: DeviceTokenRefreshDto): Promise<{
-        success: boolean;
-        message: string;
-        data: Partial<import("./dto/device-token.dto").DeviceTokenResponseDto>;
-    } | {
-        success: boolean;
-        message: any;
-        data: null;
     }>;
 }

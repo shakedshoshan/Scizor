@@ -35,3 +35,9 @@ variable "environment" {
   type        = string
   default     = "prod"
 }
+
+variable "jwt_secret" {
+  description = "JWT secret key for authentication tokens (minimum 32 characters)"
+  type        = string
+  sensitive   = true
+}

@@ -10,5 +10,9 @@ exports.validationSchema = Joi.object({
     FIREBASE_PRIVATE_KEY: Joi.string().optional(),
     ENHANCE_PROMPT_MODEL: Joi.string().default('gpt-3.5-turbo'),
     GENERATE_RESPONSE_MODEL: Joi.string().default('gpt-3.5-turbo'),
+    JWT_SECRET: Joi.string().required(),
+    RATE_LIMIT_WINDOW_MS: Joi.number().default(900000),
+    RATE_LIMIT_MAX_REQUESTS: Joi.number().default(100),
+    CORS_ORIGIN: Joi.string().optional(),
 });
 //# sourceMappingURL=validation.schema.js.map

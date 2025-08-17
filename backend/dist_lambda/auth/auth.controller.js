@@ -27,60 +27,21 @@ let AuthController = class AuthController {
     }
     async generateConsentToken(body) {
         try {
-            const consentToken = this.authService.generateConsentToken(body.userId, body.userEmail, body.userName);
+            if (!body.userId || !body.userEmail) {
+                throw new common_1.BadRequestException('userId and userEmail are required');
+            }
+            if (body.codeChallenge) {
+                console.log(`PKCE challenge received: ${body.codeChallenge}`);
+            }
+            const consentToken = this.authService.generateConsentToken(body.userId, body.userEmail, body.userName, body.codeChallenge);
             return {
                 success: true,
                 message: 'Consent token generated successfully',
                 data: {
                     consent_token: consentToken,
-                    expires_in: 600
+                    expires_in: 600,
+                    code_challenge: body.codeChallenge || null
                 },
-            };
-        }
-        catch (error) {
-            return {
-                success: false,
-                message: error.message,
-                data: null,
-            };
-        }
-    }
-    async createUser(createUserDto) {
-        try {
-            const documentId = await this.firestoreService.createUser(createUserDto);
-            return {
-                success: true,
-                message: 'User created successfully with 20 tokens',
-                data: {
-                    document_id: documentId,
-                    user_id: createUserDto.user_id,
-                    tokens: 20,
-                    is_premium: false,
-                },
-            };
-        }
-        catch (error) {
-            return {
-                success: false,
-                message: error.message,
-                data: null,
-            };
-        }
-    }
-    async getUserToken(userId) {
-        try {
-            const userToken = await this.firestoreService.getUserToken(userId);
-            if (!userToken) {
-                return {
-                    success: false,
-                    message: 'User not found',
-                    data: null,
-                };
-            }
-            return {
-                success: true,
-                message: 'User token retrieved successfully',
-                data: userToken,
             };
         }
         catch (error) {
@@ -125,6 +86,52 @@ let AuthController = class AuthController {
             };
         }
     }
+    async createUser(createUserDto) {
+        try {
+            const documentId = await this.firestoreService.createUser(createUserDto);
+            return {
+                success: true,
+                message: 'User created successfully with 20 tokens',
+                data: {
+                    document_id: documentId,
+                    user_id: createUserDto.user_id,
+                    tokens: 20,
+                    is_premium: false,
+                },
+            };
+        }
+        catch (error) {
+            const message = error.message || '';
+            if (message.toLowerCase().includes('already exists')) {
+                throw new common_1.ConflictException('User already exists');
+            }
+            throw new common_1.InternalServerErrorException('Failed to create user');
+        }
+    }
+    async getUserToken(userId) {
+        try {
+            const userToken = await this.firestoreService.getUserToken(userId);
+            if (!userToken) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                    data: null,
+                };
+            }
+            return {
+                success: true,
+                message: 'User token retrieved successfully',
+                data: userToken,
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -135,21 +142,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "generateConsentToken", null);
-__decorate([
-    (0, common_1.Post)('create-user-token'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [user_token_dto_1.CreateUserTokenDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "createUser", null);
-__decorate([
-    (0, common_1.Get)('user/:userId'),
-    __param(0, (0, common_1.Param)('userId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "getUserToken", null);
 __decorate([
     (0, common_1.Post)('device/token'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -166,6 +158,20 @@ __decorate([
     __metadata("design:paramtypes", [device_token_dto_1.DeviceTokenRefreshDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refreshDeviceToken", null);
+__decorate([
+    (0, common_1.Post)('create-user-token'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [user_token_dto_1.CreateUserTokenDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "createUser", null);
+__decorate([
+    (0, common_1.Get)('user/:userId'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getUserToken", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,

@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config/validation.schema';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     AiModule, // AI Module - Handles AI-related functionality
     AuthModule, // Auth Module - Handles authentication and Firestore operations
+    PaymentModule, // Payment Module - Handles payment and subscription operations
   ],
   controllers: [AppController],
   providers: [AppService],

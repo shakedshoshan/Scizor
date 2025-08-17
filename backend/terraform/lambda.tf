@@ -1,3 +1,9 @@
+# Format Firebase private key for Lambda environment
+locals {
+  # Convert escaped newlines to actual newlines for Lambda environment
+  firebase_private_key_formatted = replace(var.firebase_private_key, "\\n", "\n")
+}
+
 # Create the Lambda function for Scizor AI Backend
 resource "aws_lambda_function" "scizor_ai_lambda" {
   function_name    = "scizor-ai-backend"
@@ -14,7 +20,8 @@ resource "aws_lambda_function" "scizor_ai_lambda" {
       OPENAI_API_KEY      = var.openai_api_key
       FIREBASE_PROJECT_ID = var.firebase_project_id
       FIREBASE_CLIENT_EMAIL = var.firebase_client_email
-      FIREBASE_PRIVATE_KEY  = var.firebase_private_key
+      FIREBASE_PRIVATE_KEY  = local.firebase_private_key_formatted
+      JWT_SECRET          = var.jwt_secret
     }
   }
 

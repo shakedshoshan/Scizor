@@ -9,6 +9,7 @@ import os
 import tempfile
 import requests
 import json
+import base64
 from typing import Optional, Dict, Any
 import pygame
 import threading
@@ -98,7 +99,22 @@ class TextToSpeech:
             )
             
             if response.status_code == 200:
-                return response.content
+                # Handle Lambda response format
+                try:
+                    response_data = response.json()
+                    
+                    # Check if this is a Lambda response with base64 encoded audio
+                    if isinstance(response_data, dict) and 'body' in response_data and response_data.get('isBase64Encoded'):
+                        # Decode base64 audio data
+                        audio_data = base64.b64decode(response_data['body'])
+                        return audio_data
+                    else:
+                        # Fallback to direct binary response (for local development)
+                        return response.content
+                        
+                except (ValueError, KeyError):
+                    # If response is not JSON, treat as direct binary response
+                    return response.content
             else:
                 print(f"Error: API returned status code {response.status_code}")
                 try:

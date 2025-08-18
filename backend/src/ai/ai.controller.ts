@@ -13,8 +13,7 @@
  * - Delegates business logic to AiService
  */
 
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
@@ -134,12 +133,11 @@ export class AiController {
    * Converts text to speech using OpenAI's Speech API
    * 
    * @param textToSpeechDto - The text-to-speech request data
-   * @param res - Express response object for streaming audio
    * @returns Audio file in the specified format
    */
   @Post('text-to-speech')
   @HttpCode(HttpStatus.OK)
-  async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto, @Res() res: Response) {
+  async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto) {
     this.logger.log(`Converting text to speech for user: ${textToSpeechDto.user_id} with voice: ${textToSpeechDto.voice || 'alloy'}`);
     
     try {
@@ -157,29 +155,43 @@ export class AiController {
         this.logger.warn(`TTS logging skipped: ${logError?.message || 'Unknown logging error'}`);
       }
       
-      // Set appropriate headers for audio response
-      const contentType = this.getContentType(result.format);
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', result.audioBuffer.length.toString());
-      res.setHeader('Content-Disposition', 'attachment; filename="speech.mp3"');
+      // Return the response in the format expected by Lambda/API Gateway
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': this.getContentType(result.format),
+          'Content-Length': result.audioBuffer.length.toString(),
+          'Content-Disposition': 'attachment; filename="speech.mp3"',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT'
+        },
+        body: result.audioBuffer.toString('base64'),
+        isBase64Encoded: true
+      };
       
-      // Send the audio buffer
-      res.send(result.audioBuffer);
-      
-      this.logger.log(`Text-to-speech conversion completed successfully for user: ${textToSpeechDto.user_id}`);
     } catch (error) {
       this.logger.error(`Text-to-speech conversion failed for user: ${textToSpeechDto.user_id}:`, error.message);
       
       // Return structured error response for text-to-speech
-      res.status(400).json({
-        success: false,
-        error: {
-          message: error.message || 'Failed to convert text to speech',
-          type: error.constructor.name,
-          timestamp: new Date().toISOString(),
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT'
         },
-        message: 'Text-to-speech conversion failed',
-      });
+        body: JSON.stringify({
+          success: false,
+          error: {
+            message: error.message || 'Failed to convert text to speech',
+            type: error.constructor.name,
+            timestamp: new Date().toISOString(),
+          },
+          message: 'Text-to-speech conversion failed',
+        })
+      };
     }
   }
 

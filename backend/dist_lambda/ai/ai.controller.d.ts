@@ -1,4 +1,3 @@
-import { Response } from 'express';
 import { AiService } from './ai.service';
 import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto } from './dto/enhance-prompt.dto';
@@ -43,7 +42,31 @@ export declare class AiController {
         message: string;
         data?: undefined;
     }>;
-    textToSpeech(textToSpeechDto: TextToSpeechDto, res: Response): Promise<void>;
+    textToSpeech(textToSpeechDto: TextToSpeechDto): Promise<{
+        statusCode: number;
+        headers: {
+            'Content-Type': string;
+            'Content-Length': string;
+            'Content-Disposition': string;
+            'Access-Control-Allow-Origin': string;
+            'Access-Control-Allow-Headers': string;
+            'Access-Control-Allow-Methods': string;
+        };
+        body: string;
+        isBase64Encoded: boolean;
+    } | {
+        statusCode: number;
+        headers: {
+            'Content-Type': string;
+            'Access-Control-Allow-Origin': string;
+            'Access-Control-Allow-Headers': string;
+            'Access-Control-Allow-Methods': string;
+            'Content-Length'?: undefined;
+            'Content-Disposition'?: undefined;
+        };
+        body: string;
+        isBase64Encoded?: undefined;
+    }>;
     healthCheck(): Promise<{
         success: boolean;
         data: {

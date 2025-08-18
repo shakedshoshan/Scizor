@@ -99,7 +99,7 @@ let AiController = AiController_1 = class AiController {
             };
         }
     }
-    async textToSpeech(textToSpeechDto, res) {
+    async textToSpeech(textToSpeechDto) {
         this.logger.log(`Converting text to speech for user: ${textToSpeechDto.user_id} with voice: ${textToSpeechDto.voice || 'alloy'}`);
         try {
             const result = await this.aiService.textToSpeech(textToSpeechDto);
@@ -114,24 +114,40 @@ let AiController = AiController_1 = class AiController {
             catch (logError) {
                 this.logger.warn(`TTS logging skipped: ${logError?.message || 'Unknown logging error'}`);
             }
-            const contentType = this.getContentType(result.format);
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Length', result.audioBuffer.length.toString());
-            res.setHeader('Content-Disposition', 'attachment; filename="speech.mp3"');
-            res.send(result.audioBuffer);
-            this.logger.log(`Text-to-speech conversion completed successfully for user: ${textToSpeechDto.user_id}`);
+            return {
+                statusCode: 200,
+                headers: {
+                    'Content-Type': this.getContentType(result.format),
+                    'Content-Length': result.audioBuffer.length.toString(),
+                    'Content-Disposition': 'attachment; filename="speech.mp3"',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT'
+                },
+                body: result.audioBuffer.toString('base64'),
+                isBase64Encoded: true
+            };
         }
         catch (error) {
             this.logger.error(`Text-to-speech conversion failed for user: ${textToSpeechDto.user_id}:`, error.message);
-            res.status(400).json({
-                success: false,
-                error: {
-                    message: error.message || 'Failed to convert text to speech',
-                    type: error.constructor.name,
-                    timestamp: new Date().toISOString(),
+            return {
+                statusCode: 400,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT'
                 },
-                message: 'Text-to-speech conversion failed',
-            });
+                body: JSON.stringify({
+                    success: false,
+                    error: {
+                        message: error.message || 'Failed to convert text to speech',
+                        type: error.constructor.name,
+                        timestamp: new Date().toISOString(),
+                    },
+                    message: 'Text-to-speech conversion failed',
+                })
+            };
         }
     }
     async healthCheck() {
@@ -180,9 +196,8 @@ __decorate([
     (0, common_1.Post)('text-to-speech'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [text_to_speech_dto_1.TextToSpeechDto, Object]),
+    __metadata("design:paramtypes", [text_to_speech_dto_1.TextToSpeechDto]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "textToSpeech", null);
 __decorate([

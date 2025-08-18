@@ -5,6 +5,16 @@
 resource "aws_api_gateway_rest_api" "scizor_ai_api" {
   name        = "ScizorAIApi"
   description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, health, auth, and payment endpoints"
+  
+  # Add binary media types for audio responses
+  binary_media_types = [
+    "audio/mpeg",
+    "audio/opus", 
+    "audio/aac",
+    "audio/flac",
+    "audio/*",
+    "application/octet-stream"
+  ]
 }
 
 resource "aws_api_gateway_resource" "ai_resource" {
@@ -315,6 +325,8 @@ resource "aws_api_gateway_integration_response" "payment_options_integration_res
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 }
+
+
 
 #########################
 # Deployment and Stage  #

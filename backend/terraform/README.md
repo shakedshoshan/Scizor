@@ -1,20 +1,23 @@
-# Terraform AWS Serverless API
+# Scizor AI Backend - Terraform Infrastructure
 
-This directory contains Terraform configuration for deploying a serverless API on AWS using Lambda and API Gateway.
+This directory contains the Terraform configuration for deploying the Scizor AI Backend to AWS.
 
-## Project Structure
+## Architecture
 
-The Terraform configuration is organized into multiple files for better maintainability:
+- **API Gateway**: REST API with CORS support
+- **Lambda**: NestJS application running in serverless environment
+- **IAM**: Proper permissions for Lambda execution
+- **Binary Media Types**: Configured for audio responses (text-to-speech endpoint)
 
-- `main.tf` - Main entry point (organizational only)
-- `providers.tf` - AWS provider configuration
-- `variables.tf` - Variable definitions
-- `lambda.tf` - Lambda function and related resources
-- `iam.tf` - IAM roles and policies
-- `api_gateway.tf` - API Gateway configuration
-- `outputs.tf` - Output values
+## Important Notes
 
-## Usage
+### Text-to-Speech Endpoint
+The text-to-speech endpoint (`/ai/text-to-speech`) is configured to handle binary audio responses:
+- Binary media types are configured in API Gateway for audio formats
+- The endpoint supports mp3, opus, aac, and flac audio formats
+- Binary responses are properly handled through Lambda proxy integration
+
+## Deployment
 
 1. Initialize the Terraform working directory:
    ```

@@ -138,8 +138,8 @@ class DeviceAuthManager(QObject):
         # Configuration
         self.client_id = "scizor-desktop-app"  # Your desktop app client ID
         self.redirect_uri = "http://localhost:8080/callback"
-        self.auth_server_url = "http://localhost:3000"  # Your website URL
-        self.backend_url = "http://localhost:5000"  # Your backend URL
+        self.auth_server_url = "https://scizor-self.vercel.app"  # Your website URL
+        self.backend_url = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"  # Your backend URL
         self.jwt_secret = os.getenv('JWT_SECRET', 'your-secret-key')  # Should match backend JWT secret if verifying
         
         # PKCE parameters

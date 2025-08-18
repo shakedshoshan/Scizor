@@ -101,24 +101,8 @@ class MainWindow(QMainWindow):
         self.header.expand_requested.connect(self.open_expanded_window)
         self.header.settings_requested.connect(self.open_settings)
         
-        # Clipboard connections
-        self.clipboard_panel.clipboard_cleared.connect(self.on_clipboard_cleared)
-        self.clipboard_panel.item_selected.connect(self.on_clipboard_item_selected)
-        
-        # Notes connections
-        self.notes_panel.note_created.connect(self.on_note_created)
-        self.notes_panel.note_updated.connect(self.on_note_updated)
-        self.notes_panel.note_deleted.connect(self.on_note_deleted)
-        self.notes_panel.notes_loaded.connect(self.on_notes_loaded)
-        self.notes_panel.error_occurred.connect(self.on_notes_error)
-        
         # Enhance Prompt connections
-        self.enhance_prompt_panel.prompt_enhanced.connect(self.on_prompt_enhanced)
         self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
-        
-        # Generate Response connections
-        self.generate_response_panel.response_generated.connect(self.on_response_generated)
-        self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -215,48 +199,13 @@ class MainWindow(QMainWindow):
         if 'ai_splitter' in sizes_dict:
             self.ai_splitter.setSizes(sizes_dict['ai_splitter'])
         
-    # # Event handlers for feature components
-    def on_clipboard_cleared(self):
-        """Handle clipboard cleared event"""
-        print("Clipboard cleared")
-        
-    def on_clipboard_item_selected(self, item_text):
-        """Handle clipboard item selection"""
-        print(f"Selected: {item_text[:30]}...")
-        
-    def on_note_created(self, note_data):
-        """Handle note created event"""
-        print(f"Note created: {note_data.get('title', 'Untitled')}")
-        
-    def on_note_updated(self, note_data):
-        """Handle note updated event"""
-        print(f"Note updated: {note_data.get('title', 'Untitled')}")
-        
-    def on_note_deleted(self, note_id):
-        """Handle note deleted event"""
-        print(f"Note deleted: {note_id}")
-        
-    def on_notes_loaded(self, notes_list):
-        """Handle notes loaded event"""
-        print(f"Notes loaded: {len(notes_list)} notes")
-        
-    def on_notes_error(self, error_message):
-        """Handle notes error event"""
-        print(f"Notes error: {error_message}")
-        
-    def on_prompt_enhanced(self, result_data):
-        """Handle prompt enhanced event"""
-        enhanced_prompt = result_data.get('enhancedPrompt', '')
-        print(f"Prompt enhanced: {enhanced_prompt[:50]}...")
+    # Event handlers for feature components
+
         
     def on_enhance_prompt_error(self, error_message):
         """Handle enhance prompt error event"""
         print(f"Enhance prompt error: {error_message}")
         
-    def on_response_generated(self, result_data):
-        """Handle response generated event"""
-        generated_response = result_data.get('response', '')
-        print(f"Response generated: {generated_response[:50]}...")
         
     def on_generate_response_error(self, error_message):
         """Handle generate response error event"""
@@ -266,7 +215,6 @@ class MainWindow(QMainWindow):
         """Handle application close event"""
         try:
             # Stop hotkey manager
-            
             stop_hotkey_manager()
             
             # Stop clipboard monitoring
@@ -358,13 +306,8 @@ class MainWindow(QMainWindow):
             visibility_key = self.feature_visibility_mapping.get(feature_name, feature_name.lower().replace(' ', '_'))
             if self.current_settings['visibility'].get(visibility_key, True):
                 visible_features.append(feature_name)
-        
-        # Debug: Print what features are visible
-        print(f"Visible features: {visible_features}")
-        print(f"Available panels: {list(self.panels.keys())}")
                 
         if not visible_features:
-            print("No visible features found!")
             return
             
         # Rebuild layout based on settings
@@ -380,7 +323,6 @@ class MainWindow(QMainWindow):
             for feature_name in visible_features:
                 if feature_name in self.panels:
                     panel = self.panels[feature_name]
-                    print(f"Adding panel: {feature_name}")
                     self.main_splitter.addWidget(panel)
                     # Ensure the panel is visible
                     panel.setVisible(True)
@@ -405,7 +347,6 @@ class MainWindow(QMainWindow):
                     # Calculate which column this feature should go in
                     column_index = (i // features_per_column) % columns
                     panel = self.panels[feature_name]
-                    print(f"Adding panel {feature_name} to column {column_index}")
                     column_splitters[column_index].addWidget(panel)
                     # Ensure the panel is visible
                     panel.setVisible(True)
@@ -433,10 +374,4 @@ class MainWindow(QMainWindow):
                 # Only header
                 sizes = [header_height]
                 self.main_splitter.setSizes(sizes)
-                
-        # Debug: Print final layout info
-        print(f"Main splitter has {self.main_splitter.count()} widgets")
-        for i in range(self.main_splitter.count()):
-            widget = self.main_splitter.widget(i)
-            print(f"  Widget {i}: {widget.__class__.__name__} - Visible: {widget.isVisible()}")
         

@@ -24,7 +24,7 @@ class ResponseType(Enum):
 class GenerateResponseService:
     """Service for generating AI responses using the backend AI API"""
     
-    def __init__(self, base_url: str = "http://localhost:5000"):
+    def __init__(self, base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"):
         """
         Initialize the generate response service
         
@@ -129,7 +129,7 @@ class GenerateResponseService:
 _generate_response_service = None
 
 
-def get_generate_response_service(base_url: str = "http://localhost:5000") -> GenerateResponseService:
+def get_generate_response_service(base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod") -> GenerateResponseService:
     """
     Get or create the global generate response service instance
     
@@ -148,7 +148,7 @@ def get_generate_response_service(base_url: str = "http://localhost:5000") -> Ge
 def generate_response(
     content: str, 
     user_id: str,
-    base_url: str = "http://localhost:5000",
+    base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod",
 
 ) -> Dict[str, Any]:
     """

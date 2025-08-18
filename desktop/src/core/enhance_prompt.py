@@ -24,7 +24,7 @@ class EnhancementType(Enum):
 class EnhancePromptService:
     """Service for enhancing prompts using the backend AI API"""
     
-    def __init__(self, base_url: str = "http://localhost:5000"):
+    def __init__(self, base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"):
         """
         Initialize the enhance prompt service
         
@@ -129,7 +129,7 @@ class EnhancePromptService:
 _enhance_prompt_service = None
 
 
-def get_enhance_prompt_service(base_url: str = "http://localhost:5000") -> EnhancePromptService:
+def get_enhance_prompt_service(base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod") -> EnhancePromptService:
     """
     Get or create the global enhance prompt service instance
     
@@ -148,7 +148,7 @@ def get_enhance_prompt_service(base_url: str = "http://localhost:5000") -> Enhan
 def enhance_prompt(
     prompt: str, 
     user_id: str,
-    base_url: str = "http://localhost:5000",
+    base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod",
 ) -> Dict[str, Any]:
     """
     Convenience function to enhance a prompt

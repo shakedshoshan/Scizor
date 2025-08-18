@@ -21,7 +21,7 @@ class TextToSpeech:
     and plays the generated audio.
     """
     
-    def __init__(self, base_url: str = "http://localhost:5000"):
+    def __init__(self, base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"):
         """
         Initialize the Text-to-Speech service.
         
@@ -314,7 +314,7 @@ def speak_text(
     text: str,
     user_id: str,
     voice: str = "alloy",
-    base_url: str = "http://localhost:5000",
+    base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod",
     async_playback: bool = True
 ) -> Optional[threading.Thread]:
     """

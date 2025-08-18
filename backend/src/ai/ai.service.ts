@@ -19,6 +19,7 @@ import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
 import { TextToSpeechDto, VoiceType, ResponseFormat } from './dto/text-to-speech.dto';
+import { TranslateDto } from './dto/translate.dto';
 import { getContentType, serviceErrorHandler } from './utils';
 
 @Injectable()
@@ -33,6 +34,7 @@ export class AiService {
     ENHANCE_PROMPT: 1,
     GENERATE_RESPONSE: 1,
     TEXT_TO_SPEECH: 1,
+    TRANSLATE: 1,
   };
 
   constructor(
@@ -406,6 +408,84 @@ export class AiService {
       this.logger.error('Error converting text to speech:', error.message);
       throw serviceErrorHandler(error, 'convert text to speech');
     }
+  }
+
+  /**
+   * Translates text from one language to another using OpenAI
+   * @param translateDto - The translation request
+   * @returns Translated text in the target language
+   */
+  async translate(translateDto: TranslateDto): Promise<{ translatedText: string }> {
+    try {
+      await this.ensureOpenAIInitialized();
+
+      const { user_id, text, to_language } = translateDto;
+
+      // Validate required fields
+      if (!user_id) {
+        throw new BadRequestException('User ID is required to perform this operation.');
+      }
+      if (!text) {
+        throw new BadRequestException('Text is required for translation.');
+      }
+      if (!to_language) {
+        throw new BadRequestException('Target language is required for translation.');
+      }
+
+      // Deduct tokens before performing the operation
+      const tokenResult = await this.deductTokensForOperation(user_id, 'TRANSLATE');
+      if (!tokenResult.success) {
+        switch (tokenResult.errorType) {
+          case 'USER_NOT_FOUND':
+            throw new BadRequestException('User account not found. Please check your user ID or create an account.');
+          case 'INSUFFICIENT_TOKENS':
+            throw new BadRequestException('Insufficient tokens to perform this operation. Please purchase more tokens to continue.');
+          case 'FIRESTORE_UNAVAILABLE':
+            this.logger.warn('Firestore unavailable; skipping token enforcement for translate');
+            break;
+          case 'SYSTEM_ERROR':
+            this.logger.warn('Token system error; skipping token enforcement for translate');
+            break;
+          default:
+            throw new BadRequestException(tokenResult.message || 'Failed to process token deduction. Please try again.');
+        }
+      }
+
+      const systemPrompt = this.getTranslationSystemPrompt();
+      const userPrompt = this.buildTranslationUserPrompt(text, to_language);
+
+      const completion = await this.openai.chat.completions.create({
+        model: this.configService.get<string>('TRANSLATE_MODEL') || 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3,
+      });
+
+      const translatedText = completion.choices[0]?.message?.content || text;
+
+      this.logger.log(`Translation completed successfully to ${to_language}`);
+      return { translatedText };
+    } catch (error) {
+      this.logger.error('Error translating text:', error.message);
+      throw serviceErrorHandler(error, 'translate text');
+    }
+  }
+
+  /**
+   * Gets the system prompt for translation
+   */
+  private getTranslationSystemPrompt(): string {
+    return 'You are a professional translator with expertise in multiple languages. Your task is to automatically detect the source language and provide accurate, natural, and contextually appropriate translations to the target language. Always maintain the original meaning while adapting to the target language\'s cultural and linguistic nuances. Return ONLY the translated text without any additional explanations, formatting, or quotation marks.';
+  }
+
+  /**
+   * Builds the user prompt for translation requests
+   */
+  private buildTranslationUserPrompt(text: string, to_language: string): string {
+    return `Detect the language of the following text and translate it to ${to_language}:\n\n${text}\n\nPlease provide only the translated text in ${to_language}. Do not include any explanations, notes, or additional formatting.`;
   }
 
   /**

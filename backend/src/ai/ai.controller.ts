@@ -19,6 +19,7 @@ import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
 import { TextToSpeechDto } from './dto/text-to-speech.dto';
+import { TranslateDto } from './dto/translate.dto';
 import { CreateTextDto, ActionType } from '../auth/dto/text.dto';
 
 @Controller('ai')
@@ -191,6 +192,55 @@ export class AiController {
           },
           message: 'Text-to-speech conversion failed',
         })
+      };
+    }
+  }
+
+  /**
+   * POST /ai/translate
+   * Translates text from one language to another using OpenAI
+   * 
+   * @param translateDto - The translation request data
+   * @returns Translated text in the target language
+   */
+  @Post('translate')
+  @HttpCode(HttpStatus.OK)
+  async translate(@Body() translateDto: TranslateDto) {
+    this.logger.log(`Translating text for user: ${translateDto.user_id} to ${translateDto.to_language}`);
+    
+    try {
+      const result = await this.aiService.translate(translateDto);
+
+      // Try to log the text operation to Firestore (do not fail the request if logging fails)
+      try {
+        const textData: CreateTextDto = {
+          user_id: translateDto.user_id,
+          action_type: ActionType.RESPOND, // Using RESPOND as the closest action type for translation
+          text: translateDto.text,
+        };
+        await this.firestoreService.addTextDocument(textData);
+      } catch (logError: any) {
+        this.logger.warn(`Translation logging skipped: ${logError?.message || 'Unknown logging error'}`);
+      }
+
+      this.logger.log(`Translation completed successfully for user: ${translateDto.user_id}`);
+      return {
+        success: true,
+        data: result,
+        message: 'Translation completed successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Translation failed for user: ${translateDto.user_id}:`, error.message);
+      
+      // Return structured error response
+      return {
+        success: false,
+        error: {
+          message: error.message || 'Failed to translate text',
+          type: error.constructor.name,
+          timestamp: new Date().toISOString(),
+        },
+        message: 'Translation failed',
       };
     }
   }

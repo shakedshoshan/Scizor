@@ -409,6 +409,24 @@ class DatabaseConnection:
             logger.error(f"Failed to get current authenticated user: {e}")
             return None
 
+    def save_translation_language(self, language: str):
+        """Save the preferred translation language for hotkey usage"""
+        try:
+            self.save_setting('hotkey_translation_language', language)
+            logger.info(f"Translation language saved: {language}")
+        except Exception as e:
+            logger.error(f"Failed to save translation language: {e}")
+            raise
+
+    def get_translation_language(self, default: str = "Spanish") -> str:
+        """Get the preferred translation language for hotkey usage"""
+        try:
+            language = self.get_setting('hotkey_translation_language', default)
+            return language
+        except Exception as e:
+            logger.error(f"Failed to get translation language: {e}")
+            return default
+
 
 # Global database instance
 _db_instance: Optional[DatabaseConnection] = None

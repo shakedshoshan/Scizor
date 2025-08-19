@@ -783,6 +783,72 @@ class SettingsWindow(QDialog):
         
         layout.addWidget(layout_group)
         
+        # Hotkey settings
+        hotkey_group = QGroupBox("Hotkey Settings")
+        hotkey_settings = QFormLayout(hotkey_group)
+        
+        # Translation language dropdown
+        translation_label = QLabel("🌍 Translate to:")
+        translation_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        
+        self.translation_language_combo = QComboBox()
+        self.translation_language_combo.setMinimumWidth(150)
+        self.translation_language_combo.setStyleSheet("""
+            QComboBox {
+                padding: 6px 12px;
+                border: 2px solid #d1d5db;
+                border-radius: 6px;
+                background-color: white;
+                color: #374151;
+                font-size: 11px;
+                font-weight: medium;
+            }
+            QComboBox:focus {
+                border-color: #3B82F6;
+            }
+            QComboBox:hover {
+                border-color: #9ca3af;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border: 1px solid #9ca3af;
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #6b7280;
+            }
+        """)
+        
+        # Add comprehensive list of languages
+        languages = [
+            "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese",
+            "Korean", "Arabic", "Hindi", "Bengali", "Turkish", "Dutch", "Swedish", "Norwegian",
+            "Danish", "Finnish", "Polish", "Czech", "Slovak", "Hungarian", "Romanian", "Bulgarian",
+            "Croatian", "Serbian", "Slovenian", "Greek", "Hebrew", "Thai", "Vietnamese", "Indonesian",
+            "Malay", "Tagalog", "Ukrainian", "Lithuanian", "Latvian", "Estonian", "Maltese", "Irish",
+            "Welsh", "Scots Gaelic", "Basque", "Catalan", "Galician", "Swahili", "Yoruba", "Zulu",
+            "Afrikaans", "Amharic", "Armenian", "Azerbaijani", "Belarusian", "Bosnian", "Georgian",
+            "Gujarati", "Icelandic", "Kannada", "Kazakh", "Kyrgyz", "Luxembourgish", "Macedonian",
+            "Malayalam", "Marathi", "Mongolian", "Nepali", "Persian", "Punjabi", "Sinhala", "Tamil",
+            "Telugu", "Urdu", "Uzbek", "Albanian", "Esperanto", "Latin"
+        ]
+        self.translation_language_combo.addItems(languages)
+        self.translation_language_combo.setCurrentText("Spanish")  # Default
+        
+        # Help text for translation
+        translation_help = QLabel("Language used when pressing Ctrl+Alt+T")
+        translation_help.setStyleSheet("color: #6b7280; font-size: 9px; font-style: italic;")
+        
+        hotkey_settings.addRow(translation_label, self.translation_language_combo)
+        hotkey_settings.addRow("", translation_help)
+        
+        layout.addWidget(hotkey_group)
+        
         # Connect signals for app settings
         self.toggle_btn.clicked.connect(self.toggle_selected_feature)
         self.move_up_btn.clicked.connect(self.move_feature_up)
@@ -967,7 +1033,8 @@ class SettingsWindow(QDialog):
             'feature_order': feature_order,
             'columns': int(self.columns_combo.currentText()),
             'features_per_column': int(self.max_per_col_combo.currentText()),
-            'visibility': visibility
+            'visibility': visibility,
+            'translation_language': self.translation_language_combo.currentText()
         }
         
     def apply_settings(self):
@@ -977,6 +1044,8 @@ class SettingsWindow(QDialog):
         # Save settings to database
         try:
             self.db.save_layout_settings(settings)
+            # Save translation language separately
+            self.db.save_translation_language(settings.get('translation_language', 'Spanish'))
         except Exception as e:
             QMessageBox.warning(self, "Warning", f"Failed to save settings: {e}")
             return
@@ -1033,6 +1102,13 @@ class SettingsWindow(QDialog):
             self.columns_combo.setCurrentText(str(settings['columns']))
         if 'features_per_column' in settings:
             self.max_per_col_combo.setCurrentText(str(settings['features_per_column']))
+        
+        # Load translation language
+        if 'translation_language' in settings:
+            language = settings['translation_language']
+            index = self.translation_language_combo.findText(language)
+            if index >= 0:
+                self.translation_language_combo.setCurrentIndex(index)
             
         # Update layout info display
         self.update_layout_info()
@@ -1041,6 +1117,11 @@ class SettingsWindow(QDialog):
         """Load settings from database"""
         try:
             settings = self.db.load_layout_settings()
+            
+            # Load translation language from database
+            translation_language = self.db.get_translation_language("Spanish")
+            settings['translation_language'] = translation_language
+            
             self.load_settings(settings)
             
             # Ensure all default features are present
@@ -1049,6 +1130,8 @@ class SettingsWindow(QDialog):
             print(f"Failed to load settings from database: {e}")
             # Fall back to default settings
             self.init_features()
+            # Set default translation language
+            self.translation_language_combo.setCurrentText("Spanish")
             
     def ensure_all_features_present(self):
         """Ensure all default features are present in the list"""

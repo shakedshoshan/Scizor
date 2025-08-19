@@ -14,7 +14,7 @@ import pyperclip
 
 
 class PopupWindow(QDialog):
-    """Small popup window with title, message, copy button, and exit functionality"""
+    """Small popup window with title, message, copy button, and close functionality"""
     
     # Signal emitted when the popup is closed
     closed = pyqtSignal()
@@ -77,19 +77,19 @@ class PopupWindow(QDialog):
         
         # Title label
         self.title_label = QLabel(self.title)
-        self.title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self.title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))  # Increased from 12 to 14
         self.title_label.setStyleSheet("color: #2c3e50;")
         
         # Close button
         self.close_button = QPushButton("×")
-        self.close_button.setFixedSize(25, 25)
-        self.close_button.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self.close_button.setFixedSize(30, 30)  # Increased from 25x25 to 30x30
+        self.close_button.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))  # Increased from 14 to 18
         self.close_button.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
                 color: white;
                 border: none;
-                border-radius: 12px;
+                border-radius: 15px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -120,7 +120,7 @@ class PopupWindow(QDialog):
         """Create the message display area"""
         # Message label
         self.message_label = QLabel("Message:")
-        self.message_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        self.message_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))  # Increased from 10 to 12
         self.message_label.setStyleSheet("color: #34495e; margin-bottom: 5px;")
         
         # Message text area
@@ -135,7 +135,7 @@ class PopupWindow(QDialog):
                 border-radius: 5px;
                 padding: 8px;
                 font-family: 'Segoe UI';
-                font-size: 10px;
+                font-size: 14px;  /* Increased from 10px to 12px */
                 color: #495057;
             }
             QTextEdit:focus {
@@ -147,20 +147,20 @@ class PopupWindow(QDialog):
         self.main_layout.addWidget(self.message_text)
         
     def create_button_area(self):
-        """Create the button area with copy and exit buttons"""
+        """Create the button area with copy button only"""
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
         # Copy button
         self.copy_button = QPushButton("Copy Message")
-        self.copy_button.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        self.copy_button.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))  # Increased from 10 to 12
         self.copy_button.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
                 border: none;
                 border-radius: 5px;
-                padding: 8px 16px;
+                padding: 10px 20px;  /* Increased padding from 8px 16px to 10px 20px */
                 font-weight: medium;
             }
             QPushButton:hover {
@@ -172,30 +172,10 @@ class PopupWindow(QDialog):
         """)
         self.copy_button.clicked.connect(self.copy_message)
         
-        # Exit button
-        self.exit_button = QPushButton("Exit")
-        self.exit_button.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
-        self.exit_button.setStyleSheet("""
-            QPushButton {
-                background-color: #95a5a6;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 8px 16px;
-                font-weight: medium;
-            }
-            QPushButton:hover {
-                background-color: #7f8c8d;
-            }
-            QPushButton:pressed {
-                background-color: #6c7b7d;
-            }
-        """)
-        self.exit_button.clicked.connect(self.close_popup)
-        
+        # Center the copy button
+        button_layout.addStretch()
         button_layout.addWidget(self.copy_button)
         button_layout.addStretch()
-        button_layout.addWidget(self.exit_button)
         
         self.main_layout.addLayout(button_layout)
         
@@ -223,7 +203,7 @@ class PopupWindow(QDialog):
                     color: white;
                     border: none;
                     border-radius: 5px;
-                    padding: 8px 16px;
+                    padding: 10px 20px;  /* Increased padding to match */
                     font-weight: medium;
                 }
             """)
@@ -244,7 +224,7 @@ class PopupWindow(QDialog):
                 color: white;
                 border: none;
                 border-radius: 5px;
-                padding: 8px 16px;
+                padding: 10px 20px;  /* Increased padding to match */
                 font-weight: medium;
             }
             QPushButton:hover {
@@ -256,9 +236,9 @@ class PopupWindow(QDialog):
         """)
         
     def close_popup(self):
-        """Close the popup window"""
+        """Close the popup window only - does not close the entire program"""
         self.closed.emit()
-        self.accept()  # Use accept() for QDialog
+        self.accept()  # Use accept() for QDialog - this only closes the popup
         
     def set_message(self, message):
         """Update the message content"""
@@ -339,7 +319,7 @@ if __name__ == "__main__":
     # Create and show a test popup
     popup = show_popup(
         title="Test Popup",
-        message="This is a test message for the popup window.\n\nYou can copy this message using the Copy button, or close the popup using the Exit button or the × button in the top-right corner."
+        message="This is a test message for the popup window.\n\nYou can copy this message using the Copy button, or close the popup using the × button in the top-right corner."
     )
     
     sys.exit(app.exec())

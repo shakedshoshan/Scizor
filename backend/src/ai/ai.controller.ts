@@ -215,7 +215,7 @@ export class AiController {
       try {
         const textData: CreateTextDto = {
           user_id: translateDto.user_id,
-          action_type: ActionType.RESPOND, // Using RESPOND as the closest action type for translation
+          action_type: ActionType.TRANSLATE,
           text: translateDto.text,
         };
         await this.firestoreService.addTextDocument(textData);

@@ -2,6 +2,14 @@
 """
 Hotkey Manager for Scizor Desktop Application
 Handles global hotkeys for dashboard control
+
+Global Hotkeys:
+- Ctrl+Alt+S: Toggle dashboard visibility
+- Ctrl+Alt+N: Create note from selected text
+- Ctrl+Alt+H: Enhance selected text using AI
+- Ctrl+Alt+G: Generate AI response for selected text (shows in popup)
+- Ctrl+Alt+T: Translate selected text to default language (shows in popup)
+- Ctrl+Alt+R: Convert selected text to speech
 """
 
 import keyboard
@@ -61,6 +69,29 @@ class GenerateResponseWorker(QThread):
             from core.generate_response import get_generate_response_service
             generate_service = get_generate_response_service()
             result = generate_service.generate_response(self.text, self.user_id)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class TranslateWorker(QThread):
+    """Worker thread for translating text to avoid blocking the UI"""
+    
+    finished = pyqtSignal(dict)  # Signal emitted when translation is complete
+    error = pyqtSignal(str)      # Signal emitted when an error occurs
+    
+    def __init__(self, text: str, to_language: str, user_id: str):
+        super().__init__()
+        self.text = text
+        self.to_language = to_language
+        self.user_id = user_id
+        
+    def run(self):
+        """Run the translation in a separate thread"""
+        try:
+            from core.translate import get_translate_service
+            translate_service = get_translate_service()
+            result = translate_service.translate_text(self.text, self.to_language, self.user_id)
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -170,6 +201,7 @@ class HotkeyManager(QObject):
     create_note_requested = pyqtSignal(str)  # Signal to create note with text
     enhance_prompt_requested = pyqtSignal(str)  # Signal to enhance prompt with text
     generate_response_requested = pyqtSignal(str)  # Signal to generate response with text
+    translate_requested = pyqtSignal(str)  # Signal to translate text
     text_to_speech_requested = pyqtSignal(str)  # Signal to convert text to speech
     show_spinner_requested = pyqtSignal(str)  # Signal to show spinner
     hide_spinner_requested = pyqtSignal()  # Signal to hide spinner
@@ -185,6 +217,8 @@ class HotkeyManager(QObject):
         self.floating_spinner = FloatingSpinner()
         self.auth_manager = DeviceAuthManager()
         self.db = get_database()
+        # Load translation language from database
+        self.default_target_language = self.db.get_translation_language("Spanish")
         
         # Connect signals to main thread operations
         self.show_spinner_requested.connect(self._show_spinner_main_thread)
@@ -195,6 +229,41 @@ class HotkeyManager(QObject):
     def get_authenticated_user(self) -> Optional[Dict]:
         """Get the currently authenticated user from the database"""
         return get_auth_user()
+    
+    def set_default_translation_language(self, language: str):
+        """Set the default target language for translations"""
+        self.default_target_language = language
+        # Save to database
+        try:
+            self.db.save_translation_language(language)
+            print(f"Default translation language set to: {language}")
+        except Exception as e:
+            print(f"Failed to save translation language: {e}")
+    
+    def get_default_translation_language(self) -> str:
+        """Get the current default translation language"""
+        return self.default_target_language
+    
+    def refresh_translation_language(self):
+        """Refresh the translation language from database"""
+        try:
+            # Update the instance variable (though it's not used for hotkey anymore)
+            self.default_target_language = self.db.get_translation_language("Spanish")
+            print(f"Translation language refreshed: {self.default_target_language}")
+        except Exception as e:
+            print(f"Failed to refresh translation language: {e}")
+    
+    def get_current_translation_language(self) -> str:
+        """Get the current translation language from database (always fresh)
+        
+        This method is useful for external components that need to know
+        the current translation language without triggering a hotkey.
+        """
+        try:
+            return self.db.get_translation_language("Spanish")
+        except Exception as e:
+            print(f"Failed to get current translation language: {e}")
+            return "Spanish"
         
     def start(self):
         """Start listening for hotkeys"""
@@ -221,6 +290,7 @@ class HotkeyManager(QObject):
             keyboard.add_hotkey('ctrl+alt+n', self._on_create_note_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+h', self._on_enhance_prompt_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+g', self._on_generate_response_hotkey, suppress=True)
+            keyboard.add_hotkey('ctrl+alt+t', self._on_translate_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+r', self._on_text_to_speech_hotkey, suppress=True)
             
             # Keep the thread alive
@@ -386,6 +456,64 @@ class HotkeyManager(QObject):
         except Exception as e:
             print(f"Error in generate response hotkey: {e}")
     
+    def _on_translate_hotkey(self):
+        """Handle the translate hotkey press - capture selected text and translate it"""
+        try:
+            # Get authenticated user
+            user_info = self.get_authenticated_user()
+            if not user_info:
+                print("User not authenticated. Please authenticate first.")
+                return
+            
+            user_id = user_info.get('user_id')
+            if not user_id:
+                print("No user ID available. Please authenticate first.")
+                return
+            
+            # Get current translation language from database (always fresh - not cached)
+            # This ensures the hotkey always uses the latest language from settings
+            current_language = self.db.get_translation_language("Spanish")
+            
+            # Store current clipboard content
+            original_clipboard = pyperclip.paste()
+            
+            # Simulate Ctrl+C to copy selected text
+            keyboard.send('ctrl+c')
+            
+            # Small delay to ensure copy operation completes
+            time.sleep(0.15)  # Increased delay for better reliability
+            
+            # Get the selected text from clipboard
+            selected_text = pyperclip.paste().strip()
+            
+            # Restore original clipboard content
+            if original_clipboard != selected_text:
+                pyperclip.copy(original_clipboard)
+            
+            if selected_text and selected_text != original_clipboard:
+                # Validate text length and content
+                if len(selected_text) < 1:
+                    print("Selected text is too short. Please select text to translate.")
+                    return
+                
+                if len(selected_text) > 5000:
+                    print("Selected text is too long. Please select a shorter text to translate.")
+                    return
+                
+                # Save the copied text to clipboard history using thread-safe method
+                try:
+                    self.clipboard_manager.add_to_history(selected_text)
+                except Exception as e:
+                    print(f"Failed to add to clipboard history: {e}")
+                
+                # Start translation with spinner - use signals for thread safety
+                self._translate_with_spinner(selected_text, current_language, user_id)
+            else:
+                print("No text selected. Please select text first, then press Ctrl+Alt+T.")
+                
+        except Exception as e:
+            print(f"Error in translate hotkey: {e}")
+    
     def _on_text_to_speech_hotkey(self):
         """Handle the text-to-speech hotkey press - capture selected text and convert to speech"""
         try:
@@ -466,6 +594,22 @@ class HotkeyManager(QObject):
             
         except Exception as e:
             print(f"Error starting response generation: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _translate_with_spinner(self, text: str, to_language: str, user_id: str):
+        """Translate text with spinner feedback"""
+        try:
+            # Show loading spinner
+            self.show_spinner_requested.emit(f"Translating to {to_language}...")
+            
+            # Create and start worker thread
+            self.floating_spinner.worker = TranslateWorker(text, to_language, user_id)
+            self.floating_spinner.worker.finished.connect(self._on_translation_complete)
+            self.floating_spinner.worker.error.connect(self._on_translation_error)
+            self.floating_spinner.worker.start()
+            
+        except Exception as e:
+            print(f"Error starting translation: {e}")
             self.hide_spinner_requested.emit()
     
     def _text_to_speech_with_spinner(self, text: str, user_id: str):
@@ -559,6 +703,53 @@ class HotkeyManager(QObject):
             print("Error popup signal emitted")
         except Exception as e:
             print(f"Error handling response generation error: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _on_translation_complete(self, result: Dict):
+        """Handle successful translation completion"""
+        try:
+            translated_text = result.get('translatedText', '')
+            
+            if translated_text:
+                # Hide spinner first
+                self.hide_spinner_requested.emit()
+                
+                # Get the target language from the worker
+                target_language = self.floating_spinner.worker.to_language
+                
+                # Show popup with the translated text using signal for thread safety
+                popup_title = f"🌍 Translation to {target_language}"
+                popup_message = f"📝 Original text:\n{self.floating_spinner.worker.text}\n\n"
+                popup_message += f"🌍 Translated to {target_language}:\n{translated_text}"
+                
+                self.show_popup_requested.emit(popup_title, popup_message)
+                print("Translation popup signal emitted")
+                
+                # Also copy translation to clipboard for convenience
+                pyperclip.copy(translated_text)
+                print("Translation copied to clipboard")
+                
+                print("Text translated and displayed in popup!")
+            else:
+                self.update_spinner_text_requested.emit("No translation received")
+                QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
+                print("Failed to translate text. No result received.")
+                
+        except Exception as e:
+            print(f"Error completing translation: {e}")
+            self.hide_spinner_requested.emit()
+    
+    def _on_translation_error(self, error_msg: str):
+        """Handle translation error"""
+        try:
+            print(f"Translation error: {error_msg}")
+            self.hide_spinner_requested.emit()
+            
+            # Show error popup using signal for thread safety
+            self.show_popup_requested.emit("Translation Error", f"Failed to translate text.\n\nError: {error_msg}")
+            print("Translation error popup signal emitted")
+        except Exception as e:
+            print(f"Error handling translation error: {e}")
             self.hide_spinner_requested.emit()
     
     def _on_tts_complete(self):

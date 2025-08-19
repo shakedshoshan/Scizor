@@ -12,7 +12,7 @@ from typing import Dict, Optional, Any
 class TranslateService:
     """Service for translating text using the backend AI API"""
     
-    def __init__(self, base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"):
+    def __init__(self, base_url: str = "http://localhost:5000"):
         """
         Initialize the translate service
         
@@ -123,7 +123,7 @@ class TranslateService:
 _translate_service = None
 
 
-def get_translate_service(base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod") -> TranslateService:
+def get_translate_service(base_url: str = "http://localhost:5000") -> TranslateService:
     """
     Get or create the global translate service instance
     
@@ -143,7 +143,7 @@ def translate_text(
     text: str, 
     to_language: str,
     user_id: str,
-    base_url: str = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod",
+    base_url: str = "http://localhost:5000",
 ) -> Dict[str, Any]:
     """
     Convenience function to translate text

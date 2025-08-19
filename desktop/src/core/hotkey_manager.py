@@ -717,10 +717,9 @@ class HotkeyManager(QObject):
                 # Get the target language from the worker
                 target_language = self.floating_spinner.worker.to_language
                 
-                # Show popup with the translated text using signal for thread safety
+                # Show popup with only the translated text using signal for thread safety
                 popup_title = f"🌍 Translation to {target_language}"
-                popup_message = f"📝 Original text:\n{self.floating_spinner.worker.text}\n\n"
-                popup_message += f"🌍 Translated to {target_language}:\n{translated_text}"
+                popup_message = translated_text
                 
                 self.show_popup_requested.emit(popup_title, popup_message)
                 print("Translation popup signal emitted")

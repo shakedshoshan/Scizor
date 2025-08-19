@@ -6,12 +6,17 @@ import { useRouter } from 'next/navigation';
 declare global {
   interface Window {
     LemonSqueezy?: {
-      Setup: (options: { eventHandler: (data: any) => void }) => void;
+      Setup: (options: { eventHandler: (data: LemonEventData) => void }) => void;
       Url: {
         Close: () => void;
       };
     };
   }
+}
+
+interface LemonEventData {
+  event?: string;
+  [key: string]: unknown;
 }
 
 export default function LemonEventsClient() {

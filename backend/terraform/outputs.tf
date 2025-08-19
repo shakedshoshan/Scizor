@@ -25,6 +25,11 @@ output "text_to_speech_endpoint" {
   value       = "https://${aws_api_gateway_rest_api.scizor_ai_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.scizor_ai_stage.stage_name}/ai/text-to-speech"
 }
 
+output "translate_endpoint" {
+  description = "Endpoint for text translation"
+  value       = "https://${aws_api_gateway_rest_api.scizor_ai_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.scizor_ai_stage.stage_name}/ai/translate"
+}
+
 output "health_endpoint" {
   description = "Endpoint for health check"
   value       = "https://${aws_api_gateway_rest_api.scizor_ai_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.scizor_ai_stage.stage_name}/ai/health"

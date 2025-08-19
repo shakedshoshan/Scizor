@@ -47,6 +47,7 @@ The text-to-speech endpoint (`/ai/text-to-speech`) is configured to handle binar
   - `/ai/enhance-prompt` (POST)
   - `/ai/generate-response` (POST)
   - `/ai/text-to-speech` (POST)
+  - `/ai/translate` (POST)
   - `/ai/health` (GET)
 - CORS (OPTIONS) for the POST endpoints
 - API Gateway deployment and `prod` stage
@@ -58,6 +59,7 @@ The text-to-speech endpoint (`/ai/text-to-speech`) is configured to handle binar
 - `enhance_prompt_endpoint` - Full URL for the enhance-prompt route
 - `generate_response_endpoint` - Full URL for the generate-response route
 - `text_to_speech_endpoint` - Full URL for the text-to-speech route
+- `translate_endpoint` - Full URL for the translate route
 - `health_endpoint` - Full URL for the health route
 - `lambda_function_name` - Name of the Lambda function
 - `lambda_function_arn` - ARN of the Lambda function

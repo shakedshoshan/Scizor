@@ -3,6 +3,7 @@ import { FirestoreService } from '../auth/firestore.service';
 import { EnhancePromptDto } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto } from './dto/generate-response.dto';
 import { TextToSpeechDto } from './dto/text-to-speech.dto';
+import { TranslateDto } from './dto/translate.dto';
 export declare class AiService {
     private readonly configService;
     private readonly firestoreService;
@@ -30,6 +31,11 @@ export declare class AiService {
         audioBuffer: Buffer;
         format: string;
     }>;
+    translate(translateDto: TranslateDto): Promise<{
+        translatedText: string;
+    }>;
+    private getTranslationSystemPrompt;
+    private buildTranslationUserPrompt;
     healthCheck(): Promise<{
         status: string;
         message: string;

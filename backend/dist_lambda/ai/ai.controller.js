@@ -20,6 +20,7 @@ const firestore_service_1 = require("../auth/firestore.service");
 const enhance_prompt_dto_1 = require("./dto/enhance-prompt.dto");
 const generate_response_dto_1 = require("./dto/generate-response.dto");
 const text_to_speech_dto_1 = require("./dto/text-to-speech.dto");
+const translate_dto_1 = require("./dto/translate.dto");
 const text_dto_1 = require("../auth/dto/text.dto");
 let AiController = AiController_1 = class AiController {
     aiService;
@@ -150,6 +151,41 @@ let AiController = AiController_1 = class AiController {
             };
         }
     }
+    async translate(translateDto) {
+        this.logger.log(`Translating text for user: ${translateDto.user_id} to ${translateDto.to_language}`);
+        try {
+            const result = await this.aiService.translate(translateDto);
+            try {
+                const textData = {
+                    user_id: translateDto.user_id,
+                    action_type: text_dto_1.ActionType.TRANSLATE,
+                    text: translateDto.text,
+                };
+                await this.firestoreService.addTextDocument(textData);
+            }
+            catch (logError) {
+                this.logger.warn(`Translation logging skipped: ${logError?.message || 'Unknown logging error'}`);
+            }
+            this.logger.log(`Translation completed successfully for user: ${translateDto.user_id}`);
+            return {
+                success: true,
+                data: result,
+                message: 'Translation completed successfully',
+            };
+        }
+        catch (error) {
+            this.logger.error(`Translation failed for user: ${translateDto.user_id}:`, error.message);
+            return {
+                success: false,
+                error: {
+                    message: error.message || 'Failed to translate text',
+                    type: error.constructor.name,
+                    timestamp: new Date().toISOString(),
+                },
+                message: 'Translation failed',
+            };
+        }
+    }
     async healthCheck() {
         this.logger.log('Health check requested');
         try {
@@ -200,6 +236,14 @@ __decorate([
     __metadata("design:paramtypes", [text_to_speech_dto_1.TextToSpeechDto]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "textToSpeech", null);
+__decorate([
+    (0, common_1.Post)('translate'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [translate_dto_1.TranslateDto]),
+    __metadata("design:returntype", Promise)
+], AiController.prototype, "translate", null);
 __decorate([
     (0, common_1.Get)('health'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

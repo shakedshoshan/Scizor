@@ -4,7 +4,7 @@
 
 resource "aws_api_gateway_rest_api" "scizor_ai_api" {
   name        = "ScizorAIApi"
-  description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, health, auth, and payment endpoints"
+  description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, translate, health, auth, and payment endpoints"
   
   # Add binary media types for audio responses
   binary_media_types = [
@@ -28,6 +28,7 @@ locals {
     "enhance-prompt"  = { method = "POST" }
     "generate-response" = { method = "POST" }
     "text-to-speech"  = { method = "POST" }
+    "translate"       = { method = "POST" }
     "health"          = { method = "GET" }
   }
 
@@ -35,6 +36,7 @@ locals {
     "enhance-prompt",
     "generate-response",
     "text-to-speech",
+    "translate",
   ]
 
   auth_endpoints = {

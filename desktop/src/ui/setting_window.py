@@ -523,7 +523,8 @@ class FeatureListItem(QWidget):
             "Clipboard History": "📋",
             "Notes": "📝", 
             "AI Prompt Enhancement": "🤖",
-            "AI Smart Response": "🧠"
+            "AI Smart Response": "🧠",
+            "AI Translation": "🌍"
         }
         return icons.get(feature_name, "📄")
         
@@ -827,7 +828,8 @@ class SettingsWindow(QDialog):
             ("Clipboard History", True),
             ("Notes", True),
             ("AI Prompt Enhancement", True),
-            ("AI Smart Response", False)
+            ("AI Smart Response", False),
+            ("AI Translation", False)
         ]
         
     def init_features(self):

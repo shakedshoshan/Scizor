@@ -8,6 +8,7 @@ from .notes_panel import NotesPanel
 from .header_panel import HeaderPanel
 from .enhance_prompt_panel import EnhancePromptPanel
 from .generate_response_panel import GenerateResponsePanel
+from .translate_panel import TranslatePanel
 
 __all__ = [
     'ClipboardPanel',
@@ -15,4 +16,5 @@ __all__ = [
     'HeaderPanel',
     'EnhancePromptPanel',
     'GenerateResponsePanel',
+    'TranslatePanel',
 ] 

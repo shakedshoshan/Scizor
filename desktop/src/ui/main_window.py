@@ -10,7 +10,7 @@ from PyQt6.QtGui import QAction
 
 # Import modular feature components
 from .features.desktop import (
-    HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel, GenerateResponsePanel
+    HeaderPanel, ClipboardPanel, NotesPanel, EnhancePromptPanel, GenerateResponsePanel, TranslatePanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self.clipboard_panel = ClipboardPanel()
         self.enhance_prompt_panel = EnhancePromptPanel(user_id=self.user_id)
         self.generate_response_panel = GenerateResponsePanel(user_id=self.user_id)
+        self.translate_panel = TranslatePanel()
         self.notes_panel = NotesPanel()
         
         # Create main vertical splitter
@@ -83,7 +84,8 @@ class MainWindow(QMainWindow):
             'Clipboard History': self.clipboard_panel,
             'Notes': self.notes_panel,
             'AI Prompt Enhancement': self.enhance_prompt_panel,
-            'AI Smart Response': self.generate_response_panel
+            'AI Smart Response': self.generate_response_panel,
+            'AI Translation': self.translate_panel
         }
         
         # Store feature name mappings for visibility
@@ -91,7 +93,8 @@ class MainWindow(QMainWindow):
             'Clipboard History': 'clipboard_history',
             'Notes': 'notes',
             'AI Prompt Enhancement': 'ai_prompt_enhancement',
-            'AI Smart Response': 'ai_smart_response'
+            'AI Smart Response': 'ai_smart_response',
+            'AI Translation': 'ai_translation'
         }
         
     def setup_connections(self):
@@ -103,6 +106,9 @@ class MainWindow(QMainWindow):
         
         # Enhance Prompt connections
         self.enhance_prompt_panel.error_occurred.connect(self.on_enhance_prompt_error)
+        
+        # Translation connections
+        self.translate_panel.translation_copied.connect(self.on_translation_copied)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for dashboard control"""
@@ -211,6 +217,10 @@ class MainWindow(QMainWindow):
         """Handle generate response error event"""
         print(f"Generate response error: {error_message}")
         
+    def on_translation_copied(self, translated_text):
+        """Handle translation copied to clipboard event"""
+        print(f"Translation copied: {translated_text[:50]}...")
+        
     def closeEvent(self, event):
         """Handle application close event"""
         try:
@@ -236,7 +246,8 @@ class MainWindow(QMainWindow):
                 'Clipboard History',
                 'Notes',
                 'AI Prompt Enhancement',
-                'AI Smart Response'
+                'AI Smart Response',
+                'AI Translation'
             ],
             'columns': 1,
             'features_per_column': 2,
@@ -245,7 +256,8 @@ class MainWindow(QMainWindow):
                 'clipboard_history': True,
                 'notes': True,
                 'ai_prompt_enhancement': True,
-                'ai_smart_response': False
+                'ai_smart_response': False,
+                'ai_translation': False
             }
         }
     

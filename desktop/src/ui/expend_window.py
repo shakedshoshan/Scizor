@@ -14,7 +14,7 @@ from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
 # Import enhanced feature components
 from .features.expend import (
-    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel, EnhancedEnhancePromptPanel, EnhancedGenerateResponsePanel
+    EnhancedHeaderPanel, EnhancedClipboardPanel, EnhancedNotesPanel, EnhancedEnhancePromptPanel, EnhancedGenerateResponsePanel, EnhancedTranslatePanel
 )
 from core.clipboard_manager import get_clipboard_manager, start_clipboard_monitoring, stop_clipboard_monitoring
 from core import start_hotkey_manager, stop_hotkey_manager, get_hotkey_manager
@@ -103,12 +103,14 @@ class ExpandedWindow(QMainWindow):
         self.clipboard_panel = EnhancedClipboardPanel()
         self.enhance_prompt_panel = EnhancedEnhancePromptPanel(user_id=self.user_id)
         self.generate_response_panel = EnhancedGenerateResponsePanel(user_id=self.user_id)
+        self.translate_panel = EnhancedTranslatePanel()
         self.notes_panel = EnhancedNotesPanel()
         
         # Create tab pages
         self.setup_clipboard_tab()
         self.setup_enhance_prompt_tab()
         self.setup_generate_response_tab()
+        self.setup_translate_tab()
         self.setup_notes_tab()
         
         # Add widgets to main layout
@@ -162,6 +164,18 @@ class ExpandedWindow(QMainWindow):
         generate_response_layout.addWidget(self.generate_response_panel)
         
         self.content_tabs.addTab(generate_response_widget, "🤖 AI Response Generation")
+        
+    def setup_translate_tab(self):
+        """Setup the enhanced translation tab"""
+        translate_widget = QWidget()
+        translate_layout = QVBoxLayout(translate_widget)
+        translate_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Add translate panel with proper sizing
+        self.translate_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        translate_layout.addWidget(self.translate_panel)
+        
+        self.content_tabs.addTab(translate_widget, "🌍 AI Translation")
        
     def setup_connections(self):
         """Setup signal connections between components"""
@@ -187,6 +201,9 @@ class ExpandedWindow(QMainWindow):
         # Generate Response connections
         self.generate_response_panel.response_generated.connect(self.on_response_generated)
         self.generate_response_panel.error_occurred.connect(self.on_generate_response_error)
+        
+        # Translation connections
+        self.translate_panel.translation_copied.connect(self.on_translation_copied)
         
     def setup_hotkeys(self):
         """Setup global hotkeys for expanded window control"""
@@ -309,6 +326,10 @@ class ExpandedWindow(QMainWindow):
     def on_generate_response_error(self, error_message):
         """Handle generate response error event"""
         self.status_label.setText(f"Generate response error: {error_message}")
+        
+    def on_translation_copied(self, translated_text):
+        """Handle translation copied to clipboard event"""
+        self.status_label.setText(f"Translation copied: {translated_text[:30]}...")
         
         
     def showEvent(self, event):

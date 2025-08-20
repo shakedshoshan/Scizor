@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
-import { fetchProductsWithVariants, buildCheckoutUrl, getVariantPriceLabel } from '@/lib/lemonsqueezy';
+import { fetchProductsWithVariants, buildCheckoutUrl, getVariantPriceLabel } from '@/utils/lemonsqueezy';
 import LemonEventsClient from './LemonEventsClient';
 
 export default async function PricingPage() {

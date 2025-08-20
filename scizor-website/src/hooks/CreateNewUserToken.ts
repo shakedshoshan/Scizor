@@ -24,7 +24,7 @@ export const useCreateUserToken = () => {
       const payload: CreateUserTokenPayload = { user_id: userId };
 
       // Use Next.js API route to avoid CORS/backend URL coupling in the client
-      const response = await fetch(`/api/auth/create-user-token`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_PROD_URL : process.env.NEXT_PUBLIC_DEV_URL}/api/auth/create-user-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

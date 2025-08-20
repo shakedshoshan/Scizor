@@ -1,6 +1,6 @@
 export const getUserData = async (userId: string) => {
     try {
-      const url = process.env.NODE_ENV === 'production' ? process.env.PROD_URL : 'http://localhost:5000';
+      const url = process.env.NEXT_PUBLIC_NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_PROD_URL : process.env.NEXT_PUBLIC_DEV_URL;
       const response = await fetch(`${url}/auth/user/${userId}`, {
         method: 'GET',
         headers: {

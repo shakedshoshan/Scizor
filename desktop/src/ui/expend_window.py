@@ -213,9 +213,10 @@ class ExpandedWindow(QMainWindow):
         # Start clipboard monitoring if not already running
         start_clipboard_monitoring()
         
-        # Connect to hotkey manager signals
+        # Connect to hotkey manager signals (but NOT toggle_requested)
         hotkey_manager = get_hotkey_manager()
-        hotkey_manager.toggle_requested.connect(self.toggle_visibility)
+        # Note: toggle_requested is intentionally NOT connected here
+        # Only main_window.py should react to Ctrl+Alt+S
         hotkey_manager.create_note_requested.connect(self.create_note_from_text)
         
     def setup_status_bar(self):
@@ -246,14 +247,7 @@ class ExpandedWindow(QMainWindow):
         
         self.move(x, y)
         
-    def toggle_visibility(self):
-        """Toggle window visibility with hotkey"""
-        if self.isVisible():
-            self.hide()
-        else:
-            self.show()
-            self.raise_()
-            self.activateWindow()
+
             
     def create_note_from_text(self, selected_text: str):
         """Create note from selected text with hotkey"""

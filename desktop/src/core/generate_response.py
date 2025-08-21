@@ -8,7 +8,7 @@ import requests
 import json
 from typing import Dict, Optional, Any
 from enum import Enum
-
+from core.utils import get_authenticated_headers
 
 class ResponseType(Enum):
     """Response types supported by the API"""
@@ -74,14 +74,16 @@ class GenerateResponseService:
         }
             
         try:
+            # Get authentication headers
+            headers = get_authenticated_headers()
+            if not headers:
+                raise ValueError("Authentication required. Please sign in first.")
+            
             # Make API request
             response = requests.post(
                 self.api_endpoint,
                 json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
+                headers=headers,
                 timeout=30  # 30 second timeout
             )
             
@@ -110,6 +112,8 @@ class GenerateResponseService:
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON response from API")
             
+
+    
     def test_connection(self) -> bool:
         """
         Test the connection to the backend API

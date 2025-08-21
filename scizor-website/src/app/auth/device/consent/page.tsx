@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useConsentToken } from '@/hooks/useConsentToken';
 
 interface AuthParams {
   clientId: string;
@@ -16,11 +17,10 @@ interface AuthParams {
 const DeviceConsentContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { generateConsentToken, loading, error: hookError, consentToken, reset } = useConsentToken();
   const [error, setError] = useState('');
   const [authParams, setAuthParams] = useState<AuthParams | null>(null);
   const [userEmail, setUserEmail] = useState('');
-  const [consentToken, setConsentToken] = useState('');
   const [showConsentToken, setShowConsentToken] = useState(false);
 
   useEffect(() => {
@@ -73,54 +73,35 @@ const DeviceConsentContent: React.FC = () => {
 
   const handleGrantPermission = async () => {
     console.log('🔍 handleGrantPermission called');
-    setIsLoading(true);
     setError('');
 
     if (!authParams) {
       setError('Authentication parameters not found');
-      setIsLoading(false);
       return;
     }
 
     try {
       console.log('🔍 Generating JWT consent token with PKCE challenge...');
       
-      // Generate JWT consent token by calling backend with PKCE challenge
-      const response = await fetch('/api/auth/consent-token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: authParams.userId,
-          userEmail: userEmail,
-          userName: userEmail.split('@')[0], // Use email prefix as default name
-          codeChallenge: authParams.codeChallenge // Include PKCE challenge
-        }),
+      // Generate JWT consent token using the hook
+      const result = await generateConsentToken({
+        userId: authParams.userId,
+        userEmail: userEmail,
+        userName: userEmail.split('@')[0], // Use email prefix as default name
+        codeChallenge: authParams.codeChallenge // Include PKCE challenge
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to generate consent token' }));
-        throw new Error(errorData.message || 'Failed to generate consent token');
-      }
-
-      const result = await response.json();
       
-      if (result.success) {
+      if (result.success && result.data?.consent_token) {
         console.log('✅ Generated consent token with PKCE challenge:', result.data.consent_token);
-        setConsentToken(result.data.consent_token);
         setShowConsentToken(true);
         setError(''); // Clear any previous errors
       } else {
         throw new Error(result.message || 'Failed to generate consent token');
       }
       
-      setIsLoading(false);
-      
     } catch (error) {
       console.error('❌ Error in handleGrantPermission:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate consent token');
-      setIsLoading(false);
     }
   };
 
@@ -185,8 +166,8 @@ const DeviceConsentContent: React.FC = () => {
     userEmail,
     consentToken,
     showConsentToken,
-    isLoading,
-    error
+    loading,
+    error: error || hookError
   });
 
   return (
@@ -250,9 +231,9 @@ const DeviceConsentContent: React.FC = () => {
           )}
         </div>
 
-        {error && (
+        {(error || hookError) && (
           <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
+            {error || hookError}
           </div>
         )}
 
@@ -277,10 +258,10 @@ const DeviceConsentContent: React.FC = () => {
             <>
               <button
                 onClick={handleGrantPermission}
-                disabled={isLoading}
+                disabled={loading}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 font-semibold"
               >
-                {isLoading ? (
+                {loading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Granting Permission...
@@ -292,7 +273,7 @@ const DeviceConsentContent: React.FC = () => {
               
               <button
                 onClick={handleDenyPermission}
-                disabled={isLoading}
+                disabled={loading}
                 className="w-full bg-gray-200 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 Cancel

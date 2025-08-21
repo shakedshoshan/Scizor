@@ -128,15 +128,12 @@ class DatabaseConnection:
             raise
     
     def _create_users_table(self, connection: sqlite3.Connection):
-        """Create the users table if it doesn't exist"""
+        """Create the auth_tokens table if it doesn't exist"""
         create_table_sql = """
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS auth_tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT UNIQUE NOT NULL,
-            email TEXT NOT NULL,
-            name TEXT,
-            access_token TEXT,
-            refresh_token TEXT,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT NOT NULL,
             token_expiry INTEGER,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -147,7 +144,7 @@ class DatabaseConnection:
             cursor = connection.cursor()
             cursor.execute(create_table_sql)
             connection.commit()
-            logger.info("Users table created/verified successfully")
+            logger.info("Auth tokens table created/verified successfully")
         except Exception as e:
             logger.error(f"Failed to create users table: {e}")
             raise
@@ -323,79 +320,29 @@ class DatabaseConnection:
                 }
             }
 
-    def save_user_info(self, user_id: str, email: str, name: str, access_token: str = None, 
-                      refresh_token: str = None, token_expiry: int = None):
-        """Save user information to the database (clears existing users first)"""
+    def save_auth_tokens(self, access_token: str, refresh_token: str, token_expiry: int = None):
+        """Save JWT tokens to the database (clears existing tokens first for security)"""
         try:
-            # Clear all existing users first (ensure only one user at a time)
-            self.clear_all_users()
+            # Clear all existing tokens first (ensure only one active session)
+            self.clear_all_auth_tokens()
             
-            # Now save the new user
+            # Now save the new tokens
             query = """
-            INSERT INTO users 
-            (user_id, email, name, access_token, refresh_token, token_expiry, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO auth_tokens 
+            (access_token, refresh_token, token_expiry, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             """
-            self.execute_query(query, (user_id, email, name, access_token, refresh_token, token_expiry))
-            logger.info(f"User info saved: {user_id}")
+            self.execute_query(query, (access_token, refresh_token, token_expiry))
+            logger.info("Auth tokens saved successfully")
         except Exception as e:
-            logger.error(f"Failed to save user info {user_id}: {e}")
+            logger.error(f"Failed to save auth tokens: {e}")
             raise
 
-    def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user information from the database"""
-        query = "SELECT * FROM users WHERE user_id = ?"
-        try:
-            results = self.execute_query(query, (user_id,))
-            if results:
-                return results[0]
-            return None
-        except Exception as e:
-            logger.error(f"Failed to get user info {user_id}: {e}")
-            return None
-
-    def update_user_tokens(self, user_id: str, access_token: str = None, 
-                          refresh_token: str = None, token_expiry: int = None):
-        """Update user tokens in the database"""
+    def get_current_auth_tokens(self) -> Optional[Dict[str, Any]]:
+        """Get the current active JWT tokens from the database"""
         query = """
-        UPDATE users 
-        SET access_token = ?, refresh_token = ?, token_expiry = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ?
-        """
-        try:
-            self.execute_query(query, (access_token, refresh_token, token_expiry, user_id))
-            logger.info(f"User tokens updated: {user_id}")
-        except Exception as e:
-            logger.error(f"Failed to update user tokens {user_id}: {e}")
-            raise
-
-    def delete_user_info(self, user_id: str):
-        """Delete user information from the database"""
-        query = "DELETE FROM users WHERE user_id = ?"
-        try:
-            self.execute_query(query, (user_id,))
-            logger.info(f"User info deleted: {user_id}")
-        except Exception as e:
-            logger.error(f"Failed to delete user info {user_id}: {e}")
-            raise
-
-    def clear_all_users(self):
-        """Clear all users from the database (for logout)"""
-        query = "DELETE FROM users"
-        try:
-            self.execute_query(query)
-            logger.info("All users cleared from database")
-        except Exception as e:
-            logger.error(f"Failed to clear all users: {e}")
-            raise
-
-    def get_current_authenticated_user(self) -> Optional[Dict[str, Any]]:
-        """Get the currently authenticated user (user with valid tokens)"""
-        query = """
-        SELECT * FROM users 
-        WHERE access_token IS NOT NULL 
-        AND refresh_token IS NOT NULL 
-        AND (token_expiry IS NULL OR token_expiry > ?)
+        SELECT * FROM auth_tokens 
+        WHERE (token_expiry IS NULL OR token_expiry > ?)
         ORDER BY updated_at DESC 
         LIMIT 1
         """
@@ -406,8 +353,38 @@ class DatabaseConnection:
                 return results[0]
             return None
         except Exception as e:
-            logger.error(f"Failed to get current authenticated user: {e}")
+            logger.error(f"Failed to get current auth tokens: {e}")
             return None
+
+    def update_auth_tokens(self, access_token: str = None, 
+                          refresh_token: str = None, token_expiry: int = None):
+        """Update JWT tokens in the database"""
+        query = """
+        UPDATE auth_tokens 
+        SET access_token = ?, refresh_token = ?, token_expiry = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = (SELECT id FROM auth_tokens ORDER BY updated_at DESC LIMIT 1)
+        """
+        try:
+            self.execute_query(query, (access_token, refresh_token, token_expiry))
+            logger.info("Auth tokens updated successfully")
+        except Exception as e:
+            logger.error(f"Failed to update auth tokens: {e}")
+            raise
+
+    def clear_all_auth_tokens(self):
+        """Clear all JWT tokens from the database (for logout or new authentication)"""
+        query = "DELETE FROM auth_tokens"
+        try:
+            self.execute_query(query)
+            logger.info("All auth tokens cleared from database")
+        except Exception as e:
+            logger.error(f"Failed to clear all auth tokens: {e}")
+            raise
+
+    def is_authenticated(self) -> bool:
+        """Check if there are valid JWT tokens in the database"""
+        tokens = self.get_current_auth_tokens()
+        return tokens is not None
 
     def save_translation_language(self, language: str):
         """Save the preferred translation language for hotkey usage"""

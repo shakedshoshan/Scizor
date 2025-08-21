@@ -21,10 +21,6 @@ export enum EnhancementType {
 export class EnhancePromptDto {
   @IsString()
   @IsNotEmpty()
-  user_id: string;
-
-  @IsString()
-  @IsNotEmpty()
   prompt: string;
 
   @IsOptional()

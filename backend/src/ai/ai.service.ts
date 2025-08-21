@@ -150,17 +150,18 @@ export class AiService {
 
   /**
    * Enhances a prompt using OpenAI GPT models
+   * @param userId - The user ID from JWT token
    * @param enhancePromptDto - The prompt enhancement request
    * @returns Enhanced prompt with improved context and specificity
    */
-  async enhancePrompt(enhancePromptDto: EnhancePromptDto): Promise<{ enhancedPrompt: string }> {
+  async enhancePrompt(userId: string, enhancePromptDto: EnhancePromptDto): Promise<{ enhancedPrompt: string }> {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { user_id, prompt, enhancementType, context, targetAudience } = enhancePromptDto;
+      const { prompt, enhancementType, context, targetAudience } = enhancePromptDto;
 
       // Validate required fields
-      if (!user_id) {
+      if (!userId) {
         throw new BadRequestException('User ID is required to perform this operation.');
       }
       if (!prompt) {
@@ -168,7 +169,7 @@ export class AiService {
       }
 
       // Deduct tokens before performing the operation
-      const tokenResult = await this.deductTokensForOperation(user_id, 'ENHANCE_PROMPT');
+      const tokenResult = await this.deductTokensForOperation(userId, 'ENHANCE_PROMPT');
       if (!tokenResult.success) {
         switch (tokenResult.errorType) {
           case 'USER_NOT_FOUND':
@@ -211,17 +212,18 @@ export class AiService {
 
   /**
    * Generates a smart response based on input content and selected type
+   * @param userId - The user ID from JWT token
    * @param generateResponseDto - The response generation request
    * @returns Generated response based on the specified type
    */
-  async generateResponse(generateResponseDto: GenerateResponseDto): Promise<{ response: string }> {
+  async generateResponse(userId: string, generateResponseDto: GenerateResponseDto): Promise<{ response: string }> {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { user_id, content, responseType, context, tone, maxLength } = generateResponseDto;
+      const { content, responseType, context, tone, maxLength } = generateResponseDto;
 
       // Validate required fields
-      if (!user_id) {
+      if (!userId) {
         throw new BadRequestException('User ID is required to perform this operation.');
       }
       if (!content) {
@@ -229,7 +231,7 @@ export class AiService {
       }
 
       // Deduct tokens before performing the operation
-      const tokenResult = await this.deductTokensForOperation(user_id, 'GENERATE_RESPONSE');
+      const tokenResult = await this.deductTokensForOperation(userId, 'GENERATE_RESPONSE');
       if (!tokenResult.success) {
         switch (tokenResult.errorType) {
           case 'USER_NOT_FOUND':
@@ -346,17 +348,18 @@ export class AiService {
 
   /**
    * Converts text to speech using OpenAI's Speech API
+   * @param userId - The user ID from JWT token
    * @param textToSpeechDto - The text-to-speech request
    * @returns Audio buffer in the specified format
    */
-  async textToSpeech(textToSpeechDto: TextToSpeechDto): Promise<{ audioBuffer: Buffer; format: string }> {
+  async textToSpeech(userId: string, textToSpeechDto: TextToSpeechDto): Promise<{ audioBuffer: Buffer; format: string }> {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { user_id, text, voice, responseFormat, speed, model } = textToSpeechDto;
+      const { text, voice, responseFormat, speed, model } = textToSpeechDto;
 
       // Validate required fields
-      if (!user_id) {
+      if (!userId) {
         throw new BadRequestException('User ID is required to perform this operation.');
       }
       if (!text) {
@@ -364,7 +367,7 @@ export class AiService {
       }
 
       // Deduct tokens before performing the operation
-      const tokenResult = await this.deductTokensForOperation(user_id, 'TEXT_TO_SPEECH');
+      const tokenResult = await this.deductTokensForOperation(userId, 'TEXT_TO_SPEECH');
       if (!tokenResult.success) {
         switch (tokenResult.errorType) {
           case 'USER_NOT_FOUND':
@@ -412,17 +415,18 @@ export class AiService {
 
   /**
    * Translates text from one language to another using OpenAI
+   * @param userId - The user ID from JWT token
    * @param translateDto - The translation request
    * @returns Translated text in the target language
    */
-  async translate(translateDto: TranslateDto): Promise<{ translatedText: string }> {
+  async translate(userId: string, translateDto: TranslateDto): Promise<{ translatedText: string }> {
     try {
       await this.ensureOpenAIInitialized();
 
-      const { user_id, text, to_language } = translateDto;
+      const { text, to_language } = translateDto;
 
       // Validate required fields
-      if (!user_id) {
+      if (!userId) {
         throw new BadRequestException('User ID is required to perform this operation.');
       }
       if (!text) {
@@ -433,7 +437,7 @@ export class AiService {
       }
 
       // Deduct tokens before performing the operation
-      const tokenResult = await this.deductTokensForOperation(user_id, 'TRANSLATE');
+      const tokenResult = await this.deductTokensForOperation(userId, 'TRANSLATE');
       if (!tokenResult.success) {
         switch (tokenResult.errorType) {
           case 'USER_NOT_FOUND':

@@ -27,10 +27,6 @@ export enum ResponseFormat {
 export class TextToSpeechDto {
   @IsString()
   @IsNotEmpty()
-  user_id: string;
-
-  @IsString()
-  @IsNotEmpty()
   text: string;
 
   @IsOptional()

@@ -138,7 +138,7 @@ class DeviceAuthManager(QObject):
         # Configuration
         self.client_id = "scizor-desktop-app"  # Your desktop app client ID
         self.redirect_uri = "http://localhost:8080/callback"
-        self.auth_server_url = "https://scizor-self.vercel.app"  # Your website URL
+        self.auth_server_url = "http://localhost:3000"  # Your website URL
         self.backend_url = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"  # Your backend URL
         self.jwt_secret = os.getenv('JWT_SECRET', 'your-secret-key')  # Should match backend JWT secret if verifying
         
@@ -151,9 +151,8 @@ class DeviceAuthManager(QObject):
         self.local_server = None
         self.server_thread = None
         
-        # Token storage
-        self.tokens_file = self._get_tokens_file_path()
-        self._load_tokens()
+        # Token storage (database only - no file storage for security)
+        self.tokens_file = self._get_tokens_file_path()  # For cleanup only
         
         # Database connection
         self.db = get_database()
@@ -162,53 +161,27 @@ class DeviceAuthManager(QObject):
         self.auth_code_received.connect(self._exchange_code_for_tokens)
         self.auth_error.connect(self._handle_auth_error)
 
-    def verify_consent_token(self, consent_token: str) -> Optional[Dict[str, Any]]:
-        """Decode JWT consent token without verifying signature (backend will verify on exchange)"""
+    def verify_consent_token(self, consent_token: str) -> bool:
+        """Basic JWT format validation without decoding (backend will handle all validation)"""
         try:
-            # Decode without signature verification; do not trust this content for security decisions
-            decoded = jwt.decode(consent_token, options={"verify_signature": False, "verify_exp": False})
-            if decoded.get('type') != 'consent':
-                raise ValueError('Invalid token type')
-            return decoded
+            # Simple format check - JWT should have 3 parts separated by dots
+            parts = consent_token.split('.')
+            return len(parts) == 3 and all(len(part) > 0 for part in parts)
         except Exception as e:
-            print(f"Error decoding consent token: {e}")
-            return None
+            print(f"Error checking consent token format: {e}")
+            return False
 
     def process_consent_token(self, consent_token: str) -> bool:
-        """Process JWT consent token and store user information"""
+        """Process JWT consent token - exchange directly with backend"""
         try:
-            # Decode the consent token (no verification here)
-            decoded = self.verify_consent_token(consent_token)
-            if not decoded:
-                self.auth_error.emit("Invalid consent token")
+            # Basic format validation only
+            if not self.verify_consent_token(consent_token):
+                self.auth_error.emit("Invalid consent token format")
                 return False
             
-            # Extract user information
-            user_id = decoded.get('userId')
-            user_email = decoded.get('userEmail')
-            user_name = decoded.get('userName')
-            code_challenge = decoded.get('codeChallenge')
+            print("✅ Consent token format is valid, proceeding to exchange")
             
-            if not user_id or not user_email:
-                self.auth_error.emit("Invalid user information in consent token")
-                return False
-            
-            # Validate PKCE challenge if present
-            if code_challenge and self.code_challenge:
-                if code_challenge != self.code_challenge:
-                    self.auth_error.emit("PKCE challenge mismatch")
-                    return False
-            
-            # Store user information in database
-            self.db.save_user_info(
-                user_id=user_id,
-                email=user_email,
-                name=user_name
-            )
-            
-            print(f"✅ User information stored: {user_id} ({user_email})")
-            
-            # Now exchange the consent token for access tokens (backend will verify signature and expiry)
+            # Exchange the consent token for access tokens (backend will handle all validation)
             return self._exchange_consent_token_for_tokens(consent_token)
             
         except Exception as e:
@@ -243,28 +216,22 @@ class DeviceAuthManager(QObject):
                 payload = None
             
             if response.status_code == 200 and payload and payload.get('success'):
-                token_data = payload
-                # Store tokens
-                self.access_token = token_data['data']['access_token']
-                self.refresh_token = token_data['data']['refresh_token']
-                self.user_id = token_data['data']['user_id']
-                self.token_expiry = token_data['data']['expires_in']
+                token_data = payload['data']
                 
-                # Update user tokens in database
-                self.db.update_user_tokens(
-                    user_id=self.user_id,
-                    access_token=self.access_token,
-                    refresh_token=self.refresh_token,
-                    token_expiry=self.token_expiry
+                # Store ONLY JWT tokens in database (no user info for security)
+                self.db.save_auth_tokens(
+                    access_token=token_data['access_token'],
+                    refresh_token=token_data['refresh_token'],
+                    token_expiry=token_data.get('expires_in')
                 )
                 
-                # Save tokens to file
-                self._save_tokens()
+                # Clear any file-based token storage
+                self._clear_token_files()
                 
-                print("✅ Token exchange successful with PKCE validation")
+                print("✅ Token exchange successful - JWT tokens stored securely")
                 
                 # Emit success signal
-                self.token_received.emit(token_data['data'])
+                self.token_received.emit(token_data)
                 self.auth_completed.emit(True)
                 return True
             else:
@@ -284,46 +251,19 @@ class DeviceAuthManager(QObject):
             return False
     
     def _get_tokens_file_path(self) -> Path:
-        """Get the path for storing tokens securely"""
+        """Get the path for legacy token files (for cleanup only)"""
         app_data_dir = Path.home() / ".scizor"
         app_data_dir.mkdir(exist_ok=True)
-        return app_data_dir / "tokens.json"
+        return app_data_dir / "tokens.json" 
     
-    def _load_tokens(self):
-        """Load stored tokens from file"""
+    def _clear_token_files(self):
+        """Clear any file-based token storage for security"""
         try:
             if self.tokens_file.exists():
-                with open(self.tokens_file, 'r') as f:
-                    tokens = json.load(f)
-                    self.access_token = tokens.get('access_token')
-                    self.refresh_token = tokens.get('refresh_token')
-                    self.user_id = tokens.get('user_id')
-                    self.token_expiry = tokens.get('token_expiry')
-            else:
-                self.access_token = None
-                self.refresh_token = None
-                self.user_id = None
-                self.token_expiry = None
+                self.tokens_file.unlink()
+                print("✅ File-based token storage cleared")
         except Exception as e:
-            print(f"Error loading tokens: {e}")
-            self.access_token = None
-            self.refresh_token = None
-            self.user_id = None
-            self.token_expiry = None 
-    
-    def _save_tokens(self):
-        """Save tokens to file securely"""
-        try:
-            tokens = {
-                'access_token': self.access_token,
-                'refresh_token': self.refresh_token,
-                'user_id': self.user_id,
-                'token_expiry': self.token_expiry
-            }
-            with open(self.tokens_file, 'w') as f:
-                json.dump(tokens, f)
-        except Exception as e:
-            print(f"Error saving tokens: {e}")
+            print(f"Warning: Could not clear token files: {e}")
     
     def _generate_pkce_params(self):
         """Generate PKCE code verifier and challenge"""
@@ -493,10 +433,9 @@ class DeviceAuthManager(QObject):
     def exchange_token_or_code(self, token_or_code: str):
         """Exchange either a consent token or authorization code for tokens"""
         try:
-            # First, try to verify if it's a JWT consent token
-            decoded = self.verify_consent_token(token_or_code)
-            if decoded:
-                # It's a valid consent token, process it
+            # Check if it's a JWT format (3 parts separated by dots)
+            if self.verify_consent_token(token_or_code):
+                # It's a valid JWT format, process as consent token
                 return self.process_consent_token(token_or_code)
             else:
                 # Try as legacy authorization code
@@ -515,27 +454,19 @@ class DeviceAuthManager(QObject):
     
     def is_authenticated(self) -> bool:
         """Check if user is currently authenticated"""
-        if not self.access_token:
-            return False
-        
-        # Check if token is expired
-        if self.token_expiry:
-            current_time = int(time.time())
-            if current_time >= self.token_expiry:
-                # Token expired, try to refresh
-                return self.refresh_tokens()
-        
-        return True
+        return self.db.is_authenticated()
     
     def refresh_tokens(self) -> bool:
         """Refresh access token using refresh token"""
         try:
-            if not self.refresh_token:
+            # Get current tokens from database
+            tokens = self.db.get_current_auth_tokens()
+            if not tokens or not tokens.get('refresh_token'):
                 return False
             
             response = requests.post(
                 f"{self.backend_url}/auth/device/refresh",
-                json={'refresh_token': self.refresh_token},
+                json={'refresh_token': tokens['refresh_token']},
                 timeout=30
             )
             
@@ -543,12 +474,12 @@ class DeviceAuthManager(QObject):
                 token_data = response.json()
                 
                 if token_data.get('success'):
-                    # Update tokens
-                    self.access_token = token_data['data']['access_token']
-                    self.token_expiry = token_data['data']['expires_in']
-                    
-                    # Save updated tokens
-                    self._save_tokens()
+                    # Update tokens in database
+                    self.db.update_auth_tokens(
+                        access_token=token_data['data']['access_token'],
+                        token_expiry=token_data['data'].get('expires_in')
+                    )
+                    print("✅ Token refresh successful")
                     return True
                 else:
                     # Refresh failed, clear tokens
@@ -566,52 +497,34 @@ class DeviceAuthManager(QObject):
     
     def get_authenticated_request_headers(self) -> Dict[str, str]:
         """Get headers for authenticated API requests"""
-        if not self.is_authenticated():
+        try:
+            tokens = self.db.get_current_auth_tokens()
+            if tokens and tokens.get('access_token'):
+                return {
+                    'Authorization': f"Bearer {tokens['access_token']}",
+                    'Content-Type': 'application/json'
+                }
             return {}
-        
-        return {
-            'Authorization': f'Bearer {self.access_token}',
-            'Content-Type': 'application/json'
-        }
+        except Exception as e:
+            print(f"Error getting authenticated headers: {e}")
+            return {}
     
     def logout(self):
         """Logout and clear stored tokens"""
-        # Clear local tokens
-        self.access_token = None
-        self.refresh_token = None
-        self.user_id = None
-        self.token_expiry = None
-        
-        # Remove tokens file
-        if self.tokens_file.exists():
-            self.tokens_file.unlink()
-        
-        # Clear all users from database (ensure only one user can be authenticated)
         try:
-            self.db.execute_query("DELETE FROM users")
-            print("✅ All users cleared from database")
+            # Clear all JWT tokens from database
+            self.db.clear_all_auth_tokens()
+            
+            # Clear any file-based tokens
+            self._clear_token_files()
+            
+            print("✅ Logout successful - all tokens cleared")
         except Exception as e:
-            print(f"Error clearing users from database: {e}")
+            print(f"Error during logout: {e}")
     
-    def get_user_info(self) -> Optional[Dict[str, Any]]:
-        """Get current user information"""
-        if not self.is_authenticated():
-            return None
-        
-        try:
-            response = requests.get(
-                f"{self.backend_url}/auth/user/{self.user_id}",
-                headers=self.get_authenticated_request_headers(),
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('success'):
-                    return data['data']
-            
-            return None
-            
-        except Exception as e:
-            print(f"Error getting user info: {e}")
-            return None 
+    def get_auth_status(self) -> Dict[str, Any]:
+        """Get current authentication status"""
+        return {
+            'authenticated': self.is_authenticated(),
+            'tokens_available': self.db.get_current_auth_tokens() is not None
+        } 

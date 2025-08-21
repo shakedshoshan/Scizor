@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any
 import pygame
 import threading
 from pathlib import Path
-
+from core.utils import get_authenticated_headers
 
 class TextToSpeech:
     """
@@ -90,11 +90,17 @@ class TextToSpeech:
                 "model": model
             }
             
+            # Get authentication headers
+            headers = get_authenticated_headers()
+            if not headers:
+                print("Error: Authentication required. Please sign in first.")
+                return None
+            
             # Make API request
             response = requests.post(
                 self.api_endpoint,
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
                 timeout=30
             )
             
@@ -310,6 +316,7 @@ class TextToSpeech:
             "aac": "AAC audio format (high quality)",
             "flac": "FLAC audio format (lossless)"
         }
+    
     
     def test_connection(self) -> bool:
         """

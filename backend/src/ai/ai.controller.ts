@@ -13,9 +13,10 @@
  * - Delegates business logic to AiService
  */
 
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Logger, UseGuards, Request } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { FirestoreService } from '../auth/firestore.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
 import { TextToSpeechDto } from './dto/text-to-speech.dto';
@@ -36,20 +37,23 @@ export class AiController {
    * Enhances a prompt using AI to make it more specific, clear, and effective
    * 
    * @param enhancePromptDto - The prompt enhancement request data
+   * @param req - Request object containing JWT user information
    * @returns Enhanced prompt with improved context and specificity
    */
   @Post('enhance-prompt')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async enhancePrompt(@Body() enhancePromptDto: EnhancePromptDto) {
-    this.logger.log(`Enhancing prompt for user: ${enhancePromptDto.user_id} with type: ${enhancePromptDto.enhancementType || 'general'}`);
+  async enhancePrompt(@Body() enhancePromptDto: EnhancePromptDto, @Request() req: any) {
+    const userId = req.user.userId;
+    this.logger.log(`Enhancing prompt for user: ${userId} with type: ${enhancePromptDto.enhancementType || 'general'}`);
     
     try {
-      const result = await this.aiService.enhancePrompt(enhancePromptDto);
+      const result = await this.aiService.enhancePrompt(userId, enhancePromptDto);
 
       // Try to log the text operation to Firestore (do not fail the request if logging fails)
       try {
         const textData: CreateTextDto = {
-          user_id: enhancePromptDto.user_id,
+          user_id: userId,
           action_type: ActionType.ENHANCE,
           text: enhancePromptDto.prompt,
         };
@@ -58,14 +62,14 @@ export class AiController {
         this.logger.warn(`Enhance logging skipped: ${logError?.message || 'Unknown logging error'}`);
       }
 
-      this.logger.log(`Prompt enhancement completed successfully for user: ${enhancePromptDto.user_id}`);
+      this.logger.log(`Prompt enhancement completed successfully for user: ${userId}`);
       return {
         success: true,
         data: result,
         message: 'Prompt enhanced successfully',
       };
     } catch (error) {
-      this.logger.error(`Prompt enhancement failed for user: ${enhancePromptDto.user_id}:`, error.message);
+      this.logger.error(`Prompt enhancement failed for user: ${userId}:`, error.message);
       
       // Return structured error response
       return {
@@ -85,20 +89,23 @@ export class AiController {
    * Generates a smart response based on input content and selected response type
    * 
    * @param generateResponseDto - The response generation request data
+   * @param req - Request object containing JWT user information
    * @returns Generated response based on the specified type
    */
   @Post('generate-response')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async generateResponse(@Body() generateResponseDto: GenerateResponseDto) {
-    this.logger.log(`Generating response for user: ${generateResponseDto.user_id} with type: ${generateResponseDto.responseType || 'general'}`);
+  async generateResponse(@Body() generateResponseDto: GenerateResponseDto, @Request() req: any) {
+    const userId = req.user.userId;
+    this.logger.log(`Generating response for user: ${userId} with type: ${generateResponseDto.responseType || 'general'}`);
     
     try {
-      const result = await this.aiService.generateResponse(generateResponseDto);
+      const result = await this.aiService.generateResponse(userId, generateResponseDto);
 
       // Try to log the text operation to Firestore (do not fail the request if logging fails)
       try {
         const textData: CreateTextDto = {
-          user_id: generateResponseDto.user_id,
+          user_id: userId,
           action_type: ActionType.RESPOND,
           text: generateResponseDto.content,
         };
@@ -107,14 +114,14 @@ export class AiController {
         this.logger.warn(`Generate logging skipped: ${logError?.message || 'Unknown logging error'}`);
       }
       
-      this.logger.log(`Response generation completed successfully for user: ${generateResponseDto.user_id}`);
+      this.logger.log(`Response generation completed successfully for user: ${userId}`);
       return {
         success: true,
         data: result,
         message: 'Response generated successfully',
       };
     } catch (error) {
-      this.logger.error(`Response generation failed for user: ${generateResponseDto.user_id}:`, error.message);
+      this.logger.error(`Response generation failed for user: ${userId}:`, error.message);
       
       // Return structured error response
       return {
@@ -134,20 +141,23 @@ export class AiController {
    * Converts text to speech using OpenAI's Speech API
    * 
    * @param textToSpeechDto - The text-to-speech request data
+   * @param req - Request object containing JWT user information
    * @returns Audio file in the specified format
    */
   @Post('text-to-speech')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto) {
-    this.logger.log(`Converting text to speech for user: ${textToSpeechDto.user_id} with voice: ${textToSpeechDto.voice || 'alloy'}`);
+  async textToSpeech(@Body() textToSpeechDto: TextToSpeechDto, @Request() req: any) {
+    const userId = req.user.userId;
+    this.logger.log(`Converting text to speech for user: ${userId} with voice: ${textToSpeechDto.voice || 'alloy'}`);
     
     try {
-      const result = await this.aiService.textToSpeech(textToSpeechDto);
+      const result = await this.aiService.textToSpeech(userId, textToSpeechDto);
       
       // Try to log the text operation to Firestore (do not fail the request if logging fails)
       try {
         const textData: CreateTextDto = {
-          user_id: textToSpeechDto.user_id,
+          user_id: userId,
           action_type: ActionType.READ,
           text: textToSpeechDto.text,
         };
@@ -172,7 +182,7 @@ export class AiController {
       };
       
     } catch (error) {
-      this.logger.error(`Text-to-speech conversion failed for user: ${textToSpeechDto.user_id}:`, error.message);
+      this.logger.error(`Text-to-speech conversion failed for user: ${userId}:`, error.message);
       
       // Return structured error response for text-to-speech
       return {
@@ -201,20 +211,23 @@ export class AiController {
    * Translates text from one language to another using OpenAI
    * 
    * @param translateDto - The translation request data
+   * @param req - Request object containing JWT user information
    * @returns Translated text in the target language
    */
   @Post('translate')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async translate(@Body() translateDto: TranslateDto) {
-    this.logger.log(`Translating text for user: ${translateDto.user_id} to ${translateDto.to_language}`);
+  async translate(@Body() translateDto: TranslateDto, @Request() req: any) {
+    const userId = req.user.userId;
+    this.logger.log(`Translating text for user: ${userId} to ${translateDto.to_language}`);
     
     try {
-      const result = await this.aiService.translate(translateDto);
+      const result = await this.aiService.translate(userId, translateDto);
 
       // Try to log the text operation to Firestore (do not fail the request if logging fails)
       try {
         const textData: CreateTextDto = {
-          user_id: translateDto.user_id,
+          user_id: userId,
           action_type: ActionType.TRANSLATE,
           text: translateDto.text,
         };
@@ -223,14 +236,14 @@ export class AiController {
         this.logger.warn(`Translation logging skipped: ${logError?.message || 'Unknown logging error'}`);
       }
 
-      this.logger.log(`Translation completed successfully for user: ${translateDto.user_id}`);
+      this.logger.log(`Translation completed successfully for user: ${userId}`);
       return {
         success: true,
         data: result,
         message: 'Translation completed successfully',
       };
     } catch (error) {
-      this.logger.error(`Translation failed for user: ${translateDto.user_id}:`, error.message);
+      this.logger.error(`Translation failed for user: ${userId}:`, error.message);
       
       // Return structured error response
       return {
@@ -248,6 +261,7 @@ export class AiController {
   /**
    * GET /ai/health
    * Health check endpoint to verify OpenAI service status
+   * This endpoint is public and doesn't require authentication
    * 
    * @returns Service health status
    */

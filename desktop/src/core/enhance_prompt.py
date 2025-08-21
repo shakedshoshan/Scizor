@@ -8,7 +8,7 @@ import requests
 import json
 from typing import Dict, Optional, Any
 from enum import Enum
-
+from core.utils import get_authenticated_headers
 
 class EnhancementType(Enum):
     """Enhancement types supported by the API"""
@@ -69,19 +69,25 @@ class EnhancePromptService:
             
         # Prepare request payload
         payload = {
-            "prompt": prompt.strip(),
-            "user_id": str(user_id).strip(),
+            "prompt": prompt.strip()
         }
             
         try:
+            # Get authentication headers
+            headers = get_authenticated_headers()
+            if not headers:
+                raise ValueError("Authentication required. Please sign in first.")
+            
+            print(f"--------------enhance_prompt------------------")
+            print(f"API Endpoint: {self.api_endpoint}")
+            print(f"Headers: {headers}")
+            print(f"Payload: {payload}")
+            
             # Make API request
             response = requests.post(
                 self.api_endpoint,
                 json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
+                headers=headers,
                 timeout=30  # 30 second timeout
             )
             
@@ -109,7 +115,7 @@ class EnhancePromptService:
             raise requests.RequestException(f"API request failed: {str(e)}")
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON response from API")
-            
+     
     def test_connection(self) -> bool:
         """
         Test the connection to the backend API

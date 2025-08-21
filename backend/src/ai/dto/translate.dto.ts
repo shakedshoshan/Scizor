@@ -11,10 +11,6 @@ import { IsString, IsNotEmpty } from 'class-validator';
 export class TranslateDto {
   @IsString()
   @IsNotEmpty()
-  user_id: string;
-
-  @IsString()
-  @IsNotEmpty()
   text: string;
 
   @IsString()

@@ -7,6 +7,7 @@ Handles text translation functionality using the backend AI API
 import requests
 import json
 from typing import Dict, Optional, Any
+from core.utils import get_authenticated_headers
 
 
 class TranslateService:
@@ -68,14 +69,16 @@ class TranslateService:
         }
             
         try:
+            # Get authentication headers
+            headers = get_authenticated_headers()
+            if not headers:
+                raise ValueError("Authentication required. Please sign in first.")
+            
             # Make API request
             response = requests.post(
                 self.api_endpoint,
                 json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
+                headers=headers,
                 timeout=30  # 30 second timeout
             )
             

@@ -49,12 +49,13 @@ export class AuthService {
       userEmail,
       userName: userName || userEmail.split('@')[0],
       type: 'consent',
-      codeChallenge, // Include code challenge for PKCE validation
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (10 * 60) // 10 minutes
+      codeChallenge // Include code challenge for PKCE validation
     };
     
-    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
+    return jwt.sign(payload, this.JWT_SECRET, { 
+      algorithm: 'HS256',
+      expiresIn: '10m'
+    });
   }
 
   /**
@@ -62,13 +63,23 @@ export class AuthService {
    */
   verifyConsentToken(token: string): any {
     try {
-      const decoded = jwt.verify(token, this.JWT_SECRET, { algorithms: ['HS256'] }) as any;
+      const decoded = jwt.verify(token, this.JWT_SECRET, { 
+        algorithms: ['HS256'],
+        clockTolerance: 30 // Allow 30 seconds of clock drift
+      }) as any;
+      
       if (decoded.type !== 'consent') {
-        throw new Error('Invalid token type');
+        throw new Error(`Invalid token type. Expected 'consent', got '${decoded.type}'`);
       }
       return decoded;
     } catch (error) {
-      throw new Error('Invalid consent token');
+      if (error.name === 'JsonWebTokenError') {
+        throw new Error(`Invalid consent token: ${error.message}`);
+      } else if (error.name === 'TokenExpiredError') {
+        throw new Error(`Consent token expired: ${error.message}`);
+      } else {
+        throw new Error(`Consent token verification failed: ${error.message}`);
+      }
     }
   }
 
@@ -142,6 +153,14 @@ export class AuthService {
         const refreshToken = this.generateRefreshToken(userId);
         const expiresIn = this.getTokenExpiryTime();
 
+        console.log('\n🎯 TOKEN EXCHANGE COMPLETED (Consent Token):');
+        console.log('==================================================');
+        console.log(`User ID: ${userId}`);
+        console.log(`Access Token: ${accessToken}`);
+        console.log(`Refresh Token: ${refreshToken}`);
+        console.log(`Expires In: ${expiresIn} seconds`);
+        console.log('==================================================\n');
+
         return {
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -161,6 +180,14 @@ export class AuthService {
         const accessToken = this.generateAccessToken(userId);
         const refreshToken = this.generateRefreshToken(userId);
         const expiresIn = this.getTokenExpiryTime();
+
+        console.log('\n🎯 TOKEN EXCHANGE COMPLETED (Auth Code):');
+        console.log('==================================================');
+        console.log(`User ID: ${userId}`);
+        console.log(`Access Token: ${accessToken}`);
+        console.log(`Refresh Token: ${refreshToken}`);
+        console.log(`Expires In: ${expiresIn} seconds`);
+        console.log('==================================================\n');
 
         return {
           access_token: accessToken,
@@ -185,17 +212,28 @@ export class AuthService {
    */
   async refreshDeviceToken(refreshDto: DeviceTokenRefreshDto): Promise<Partial<DeviceTokenResponseDto>> {
     try {
-      // Verify refresh token
-      const payload = jwt.verify(refreshDto.refresh_token, this.JWT_SECRET, { algorithms: ['HS256'] }) as any;
+      // Verify refresh token with consistent options
+      const payload = jwt.verify(refreshDto.refresh_token, this.JWT_SECRET, { 
+        algorithms: ['HS256'],
+        clockTolerance: 30
+      }) as any;
+      
       const userId = payload.userId;
 
       if (!userId || payload.type !== 'refresh') {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException(`Invalid refresh token. Expected type 'refresh', got '${payload.type}'`);
       }
 
       // Generate new access token
       const accessToken = this.generateAccessToken(userId);
       const expiresIn = this.getTokenExpiryTime();
+
+      console.log('\n🔄 TOKEN REFRESH COMPLETED:');
+      console.log('==================================================');
+      console.log(`User ID: ${userId}`);
+      console.log(`New Access Token: ${accessToken}`);
+      console.log(`Expires In: ${expiresIn} seconds`);
+      console.log('==================================================\n');
 
       return {
         access_token: accessToken,
@@ -203,7 +241,13 @@ export class AuthService {
         token_type: 'Bearer'
       };
     } catch (error) {
-      throw new UnauthorizedException(`Token refresh failed: ${error.message}`);
+      if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException(`Invalid refresh token: ${error.message}`);
+      } else if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException(`Refresh token expired: ${error.message}`);
+      } else {
+        throw new UnauthorizedException(`Token refresh failed: ${error.message}`);
+      }
     }
   }
 
@@ -213,12 +257,26 @@ export class AuthService {
   private generateAccessToken(userId: string): string {
     const payload = {
       userId,
-      type: 'access',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
+      type: 'access'
     };
     
-    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
+    // Use expiresIn option instead of manual iat/exp to avoid timing issues
+    const token = jwt.sign(payload, this.JWT_SECRET, { 
+      algorithm: 'HS256',
+      expiresIn: '1h'
+    });
+    
+    // Log the generated token for debugging/testing
+    console.log('\n🔑 GENERATED ACCESS TOKEN:');
+    console.log('==================================================');
+    console.log(token);
+    console.log('==================================================');
+    console.log(`User ID: ${userId}`);
+    console.log(`Token Type: access`);
+    console.log(`Expires: 1 hour from now`);
+    console.log('Copy this token to use in Authorization header: Bearer <token>\n');
+    
+    return token;
   }
 
   /**
@@ -227,12 +285,14 @@ export class AuthService {
   private generateRefreshToken(userId: string): string {
     const payload = {
       userId,
-      type: 'refresh',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days
+      type: 'refresh'
     };
     
-    return jwt.sign(payload, this.JWT_SECRET, { algorithm: 'HS256' });
+    // Use expiresIn option instead of manual iat/exp to avoid timing issues
+    return jwt.sign(payload, this.JWT_SECRET, { 
+      algorithm: 'HS256',
+      expiresIn: '7d'
+    });
   }
 
   /**
@@ -252,6 +312,77 @@ export class AuthService {
       }
     }
     return null;
+  }
+
+  /**
+   * Verify JWT access token
+   * @param token - The JWT token to verify
+   * @returns Decoded token payload
+   */
+  verifyAccessToken(token: string): any {
+    try {
+      // Verify token with explicit algorithm specification
+      const decoded = jwt.verify(token, this.JWT_SECRET, { 
+        algorithms: ['HS256'],
+        clockTolerance: 30 // Allow 30 seconds of clock drift
+      }) as any;
+      
+      // Validate token type (should be 'access' for API requests)
+      if (decoded.type !== 'access') {
+        throw new Error(`Invalid token type for API access. Expected 'access', got '${decoded.type}'`);
+      }
+
+      return decoded;
+    } catch (error) {
+      // Provide more specific error messages based on error type
+      if (error.name === 'JsonWebTokenError') {
+        throw new Error(`Invalid token: ${error.message}`);
+      } else if (error.name === 'TokenExpiredError') {
+        throw new Error(`Token expired: ${error.message}`);
+      } else if (error.name === 'NotBeforeError') {
+        throw new Error(`Token not active: ${error.message}`);
+      } else {
+        throw new Error(`Token verification failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Debug method to test token generation and verification
+   * This method is for debugging purposes only
+   */
+  debugJWT(): { success: boolean; message: string; data?: any } {
+    try {
+      const testUserId = 'test-user-123';
+      
+      // Generate a test token
+      const token = this.generateAccessToken(testUserId);
+      console.log('Generated test token:', token);
+      
+      // Immediately verify the same token
+      const decoded = this.verifyAccessToken(token);
+      console.log('Verified test token:', decoded);
+      
+      return {
+        success: true,
+        message: 'JWT generation and verification working correctly',
+        data: {
+          generated: token,
+          decoded: decoded,
+          jwtSecretLength: this.JWT_SECRET?.length
+        }
+      };
+    } catch (error) {
+      console.error('JWT debug error:', error);
+      return {
+        success: false,
+        message: `JWT debug failed: ${error.message}`,
+        data: {
+          jwtSecretExists: !!this.JWT_SECRET,
+          jwtSecretLength: this.JWT_SECRET?.length
+        }
+      };
+    }
   }
 
   /**

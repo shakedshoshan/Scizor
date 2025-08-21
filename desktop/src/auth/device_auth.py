@@ -3,21 +3,16 @@ Device Flow Authentication Manager for Scizor Desktop Application
 Implements PKCE (Proof Key for Code Exchange) flow for secure desktop authentication
 """
 
-import os
-import json
 import base64
 import hashlib
 import secrets
 import webbrowser
-import threading
-import time
 from typing import Optional, Dict, Any
 from urllib.parse import urlencode, parse_qs, urlparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 from PyQt6.QtCore import QObject, pyqtSignal
 from pathlib import Path
-import jwt
 from database.db_connection import get_database
 
 
@@ -136,11 +131,10 @@ class DeviceAuthManager(QObject):
         super().__init__()
         
         # Configuration
-        self.client_id = "scizor-desktop-app"  # Your desktop app client ID
+        self.client_id = "scizor-desktop-app"
         self.redirect_uri = "http://localhost:8080/callback"
-        self.auth_server_url = "http://localhost:3000"  # Your website URL
-        self.backend_url = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"  # Your backend URL
-        self.jwt_secret = os.getenv('JWT_SECRET', 'your-secret-key')  # Should match backend JWT secret if verifying
+        self.auth_server_url = "http://localhost:3000"
+        self.backend_url = "https://uicah08f3a.execute-api.us-east-1.amazonaws.com/prod"
         
         # PKCE parameters
         self.code_verifier = None
@@ -150,9 +144,6 @@ class DeviceAuthManager(QObject):
         # Local server
         self.local_server = None
         self.server_thread = None
-        
-        # Token storage (database only - no file storage for security)
-        self.tokens_file = self._get_tokens_file_path()  # For cleanup only
         
         # Database connection
         self.db = get_database()
@@ -225,8 +216,7 @@ class DeviceAuthManager(QObject):
                     token_expiry=token_data.get('expires_in')
                 )
                 
-                # Clear any file-based token storage
-                self._clear_token_files()
+
                 
                 print("✅ Token exchange successful - JWT tokens stored securely")
                 
@@ -250,20 +240,7 @@ class DeviceAuthManager(QObject):
             self.auth_completed.emit(False)
             return False
     
-    def _get_tokens_file_path(self) -> Path:
-        """Get the path for legacy token files (for cleanup only)"""
-        app_data_dir = Path.home() / ".scizor"
-        app_data_dir.mkdir(exist_ok=True)
-        return app_data_dir / "tokens.json" 
-    
-    def _clear_token_files(self):
-        """Clear any file-based token storage for security"""
-        try:
-            if self.tokens_file.exists():
-                self.tokens_file.unlink()
-                print("✅ File-based token storage cleared")
-        except Exception as e:
-            print(f"Warning: Could not clear token files: {e}")
+
     
     def _generate_pkce_params(self):
         """Generate PKCE code verifier and challenge"""
@@ -336,54 +313,11 @@ class DeviceAuthManager(QObject):
     
     def _exchange_code_for_tokens(self, auth_code: str):
         """Exchange authorization code for tokens (legacy flow)"""
-        try:
-            # Make request to backend to exchange code for tokens
-            exchange_data = {
-                'authorization_code': auth_code,
-                'code_verifier': self.code_verifier,
-                'redirect_uri': self.redirect_uri
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/auth/device/token",
-                json=exchange_data,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                token_data = response.json()
-                
-                if token_data.get('success'):
-                    # Store tokens
-                    self.access_token = token_data['data']['access_token']
-                    self.refresh_token = token_data['data']['refresh_token']
-                    self.user_id = token_data['data']['user_id']
-                    self.token_expiry = token_data['data']['expires_in']
-                    
-                    # Save tokens
-                    self._save_tokens()
-                    
-                    # Emit success signal
-                    self.token_received.emit(token_data['data'])
-                    self.auth_completed.emit(True)
-                else:
-                    error_msg = token_data.get('message', 'Token exchange failed')
-                    self.token_error.emit(error_msg)
-                    self.auth_completed.emit(False)
-            else:
-                error_msg = f"Token exchange failed: {response.status_code}"
-                self.token_error.emit(error_msg)
-                self.auth_completed.emit(False)
-                
-        except Exception as e:
-            error_msg = f"Error exchanging code for tokens: {str(e)}"
-            self.token_error.emit(error_msg)
-            self.auth_completed.emit(False)
+        return self.exchange_authorization_code(auth_code)
     
     def exchange_authorization_code(self, auth_code: str):
-        """Manually exchange authorization code for tokens (legacy support)"""
+        """Exchange authorization code for tokens (legacy support)"""
         try:
-            # Make request to backend to exchange code for tokens
             exchange_data = {
                 'authorization_code': auth_code,
                 'code_verifier': self.code_verifier,
@@ -400,16 +334,13 @@ class DeviceAuthManager(QObject):
                 token_data = response.json()
                 
                 if token_data.get('success'):
-                    # Store tokens
-                    self.access_token = token_data['data']['access_token']
-                    self.refresh_token = token_data['data']['refresh_token']
-                    self.user_id = token_data['data']['user_id']
-                    self.token_expiry = token_data['data']['expires_in']
+                    # Store tokens in database
+                    self.db.save_auth_tokens(
+                        access_token=token_data['data']['access_token'],
+                        refresh_token=token_data['data']['refresh_token'],
+                        token_expiry=token_data['data'].get('expires_in')
+                    )
                     
-                    # Save tokens
-                    self._save_tokens()
-                    
-                    # Emit success signal
                     self.token_received.emit(token_data['data'])
                     self.auth_completed.emit(True)
                     return True
@@ -514,10 +445,6 @@ class DeviceAuthManager(QObject):
         try:
             # Clear all JWT tokens from database
             self.db.clear_all_auth_tokens()
-            
-            # Clear any file-based tokens
-            self._clear_token_files()
-            
             print("✅ Logout successful - all tokens cleared")
         except Exception as e:
             print(f"Error during logout: {e}")

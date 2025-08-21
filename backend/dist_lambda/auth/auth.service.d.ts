@@ -17,5 +17,11 @@ export declare class AuthService {
     private generateAccessToken;
     private generateRefreshToken;
     private extractUserIdFromAuthCode;
+    verifyAccessToken(token: string): any;
+    debugJWT(): {
+        success: boolean;
+        message: string;
+        data?: any;
+    };
     private getTokenExpiryTime;
 }

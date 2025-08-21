@@ -17,6 +17,7 @@ exports.AiController = void 0;
 const common_1 = require("@nestjs/common");
 const ai_service_1 = require("./ai.service");
 const firestore_service_1 = require("../auth/firestore.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const enhance_prompt_dto_1 = require("./dto/enhance-prompt.dto");
 const generate_response_dto_1 = require("./dto/generate-response.dto");
 const text_to_speech_dto_1 = require("./dto/text-to-speech.dto");
@@ -30,13 +31,14 @@ let AiController = AiController_1 = class AiController {
         this.aiService = aiService;
         this.firestoreService = firestoreService;
     }
-    async enhancePrompt(enhancePromptDto) {
-        this.logger.log(`Enhancing prompt for user: ${enhancePromptDto.user_id} with type: ${enhancePromptDto.enhancementType || 'general'}`);
+    async enhancePrompt(enhancePromptDto, req) {
+        const userId = req.user.userId;
+        this.logger.log(`Enhancing prompt for user: ${userId} with type: ${enhancePromptDto.enhancementType || 'general'}`);
         try {
-            const result = await this.aiService.enhancePrompt(enhancePromptDto);
+            const result = await this.aiService.enhancePrompt(userId, enhancePromptDto);
             try {
                 const textData = {
-                    user_id: enhancePromptDto.user_id,
+                    user_id: userId,
                     action_type: text_dto_1.ActionType.ENHANCE,
                     text: enhancePromptDto.prompt,
                 };
@@ -45,7 +47,7 @@ let AiController = AiController_1 = class AiController {
             catch (logError) {
                 this.logger.warn(`Enhance logging skipped: ${logError?.message || 'Unknown logging error'}`);
             }
-            this.logger.log(`Prompt enhancement completed successfully for user: ${enhancePromptDto.user_id}`);
+            this.logger.log(`Prompt enhancement completed successfully for user: ${userId}`);
             return {
                 success: true,
                 data: result,
@@ -53,7 +55,7 @@ let AiController = AiController_1 = class AiController {
             };
         }
         catch (error) {
-            this.logger.error(`Prompt enhancement failed for user: ${enhancePromptDto.user_id}:`, error.message);
+            this.logger.error(`Prompt enhancement failed for user: ${userId}:`, error.message);
             return {
                 success: false,
                 error: {
@@ -65,13 +67,14 @@ let AiController = AiController_1 = class AiController {
             };
         }
     }
-    async generateResponse(generateResponseDto) {
-        this.logger.log(`Generating response for user: ${generateResponseDto.user_id} with type: ${generateResponseDto.responseType || 'general'}`);
+    async generateResponse(generateResponseDto, req) {
+        const userId = req.user.userId;
+        this.logger.log(`Generating response for user: ${userId} with type: ${generateResponseDto.responseType || 'general'}`);
         try {
-            const result = await this.aiService.generateResponse(generateResponseDto);
+            const result = await this.aiService.generateResponse(userId, generateResponseDto);
             try {
                 const textData = {
-                    user_id: generateResponseDto.user_id,
+                    user_id: userId,
                     action_type: text_dto_1.ActionType.RESPOND,
                     text: generateResponseDto.content,
                 };
@@ -80,7 +83,7 @@ let AiController = AiController_1 = class AiController {
             catch (logError) {
                 this.logger.warn(`Generate logging skipped: ${logError?.message || 'Unknown logging error'}`);
             }
-            this.logger.log(`Response generation completed successfully for user: ${generateResponseDto.user_id}`);
+            this.logger.log(`Response generation completed successfully for user: ${userId}`);
             return {
                 success: true,
                 data: result,
@@ -88,7 +91,7 @@ let AiController = AiController_1 = class AiController {
             };
         }
         catch (error) {
-            this.logger.error(`Response generation failed for user: ${generateResponseDto.user_id}:`, error.message);
+            this.logger.error(`Response generation failed for user: ${userId}:`, error.message);
             return {
                 success: false,
                 error: {
@@ -100,13 +103,14 @@ let AiController = AiController_1 = class AiController {
             };
         }
     }
-    async textToSpeech(textToSpeechDto) {
-        this.logger.log(`Converting text to speech for user: ${textToSpeechDto.user_id} with voice: ${textToSpeechDto.voice || 'alloy'}`);
+    async textToSpeech(textToSpeechDto, req) {
+        const userId = req.user.userId;
+        this.logger.log(`Converting text to speech for user: ${userId} with voice: ${textToSpeechDto.voice || 'alloy'}`);
         try {
-            const result = await this.aiService.textToSpeech(textToSpeechDto);
+            const result = await this.aiService.textToSpeech(userId, textToSpeechDto);
             try {
                 const textData = {
-                    user_id: textToSpeechDto.user_id,
+                    user_id: userId,
                     action_type: text_dto_1.ActionType.READ,
                     text: textToSpeechDto.text,
                 };
@@ -130,7 +134,7 @@ let AiController = AiController_1 = class AiController {
             };
         }
         catch (error) {
-            this.logger.error(`Text-to-speech conversion failed for user: ${textToSpeechDto.user_id}:`, error.message);
+            this.logger.error(`Text-to-speech conversion failed for user: ${userId}:`, error.message);
             return {
                 statusCode: 400,
                 headers: {
@@ -151,13 +155,14 @@ let AiController = AiController_1 = class AiController {
             };
         }
     }
-    async translate(translateDto) {
-        this.logger.log(`Translating text for user: ${translateDto.user_id} to ${translateDto.to_language}`);
+    async translate(translateDto, req) {
+        const userId = req.user.userId;
+        this.logger.log(`Translating text for user: ${userId} to ${translateDto.to_language}`);
         try {
-            const result = await this.aiService.translate(translateDto);
+            const result = await this.aiService.translate(userId, translateDto);
             try {
                 const textData = {
-                    user_id: translateDto.user_id,
+                    user_id: userId,
                     action_type: text_dto_1.ActionType.TRANSLATE,
                     text: translateDto.text,
                 };
@@ -166,7 +171,7 @@ let AiController = AiController_1 = class AiController {
             catch (logError) {
                 this.logger.warn(`Translation logging skipped: ${logError?.message || 'Unknown logging error'}`);
             }
-            this.logger.log(`Translation completed successfully for user: ${translateDto.user_id}`);
+            this.logger.log(`Translation completed successfully for user: ${userId}`);
             return {
                 success: true,
                 data: result,
@@ -174,7 +179,7 @@ let AiController = AiController_1 = class AiController {
             };
         }
         catch (error) {
-            this.logger.error(`Translation failed for user: ${translateDto.user_id}:`, error.message);
+            this.logger.error(`Translation failed for user: ${userId}:`, error.message);
             return {
                 success: false,
                 error: {
@@ -214,34 +219,42 @@ let AiController = AiController_1 = class AiController {
 exports.AiController = AiController;
 __decorate([
     (0, common_1.Post)('enhance-prompt'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [enhance_prompt_dto_1.EnhancePromptDto]),
+    __metadata("design:paramtypes", [enhance_prompt_dto_1.EnhancePromptDto, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "enhancePrompt", null);
 __decorate([
     (0, common_1.Post)('generate-response'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [generate_response_dto_1.GenerateResponseDto]),
+    __metadata("design:paramtypes", [generate_response_dto_1.GenerateResponseDto, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "generateResponse", null);
 __decorate([
     (0, common_1.Post)('text-to-speech'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [text_to_speech_dto_1.TextToSpeechDto]),
+    __metadata("design:paramtypes", [text_to_speech_dto_1.TextToSpeechDto, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "textToSpeech", null);
 __decorate([
     (0, common_1.Post)('translate'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [translate_dto_1.TranslateDto]),
+    __metadata("design:paramtypes", [translate_dto_1.TranslateDto, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "translate", null);
 __decorate([

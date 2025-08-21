@@ -22,7 +22,6 @@ var ResponseType;
     ResponseType["FUN"] = "fun";
 })(ResponseType || (exports.ResponseType = ResponseType = {}));
 class GenerateResponseDto {
-    user_id;
     content;
     responseType = ResponseType.GENERAL;
     context;
@@ -30,11 +29,6 @@ class GenerateResponseDto {
     maxLength;
 }
 exports.GenerateResponseDto = GenerateResponseDto;
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], GenerateResponseDto.prototype, "user_id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),

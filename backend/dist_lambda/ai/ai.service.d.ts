@@ -17,21 +17,21 @@ export declare class AiService {
     private performInitialization;
     private ensureOpenAIInitialized;
     private deductTokensForOperation;
-    enhancePrompt(enhancePromptDto: EnhancePromptDto): Promise<{
+    enhancePrompt(userId: string, enhancePromptDto: EnhancePromptDto): Promise<{
         enhancedPrompt: string;
     }>;
-    generateResponse(generateResponseDto: GenerateResponseDto): Promise<{
+    generateResponse(userId: string, generateResponseDto: GenerateResponseDto): Promise<{
         response: string;
     }>;
     private getEnhancementSystemPrompt;
     private getResponseSystemPrompt;
     private buildEnhancementUserPrompt;
     private buildResponseUserPrompt;
-    textToSpeech(textToSpeechDto: TextToSpeechDto): Promise<{
+    textToSpeech(userId: string, textToSpeechDto: TextToSpeechDto): Promise<{
         audioBuffer: Buffer;
         format: string;
     }>;
-    translate(translateDto: TranslateDto): Promise<{
+    translate(userId: string, translateDto: TranslateDto): Promise<{
         translatedText: string;
     }>;
     private getTranslationSystemPrompt;

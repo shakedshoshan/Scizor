@@ -8,7 +8,6 @@ export declare enum ResponseType {
     FUN = "fun"
 }
 export declare class GenerateResponseDto {
-    user_id: string;
     content: string;
     responseType?: ResponseType;
     context?: string;

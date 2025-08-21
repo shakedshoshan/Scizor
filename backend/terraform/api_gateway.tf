@@ -4,7 +4,7 @@
 
 resource "aws_api_gateway_rest_api" "scizor_ai_api" {
   name        = "ScizorAIApi"
-  description = "Scizor AI Backend API with enhance-prompt, generate-response, text-to-speech, translate, health, auth, and payment endpoints"
+  description = "Scizor AI Backend API with secure JWT-authenticated AI endpoints (enhance-prompt, generate-response, text-to-speech, translate), public health check, auth, and payment endpoints"
   
   # Add binary media types for audio responses
   binary_media_types = [
@@ -17,6 +17,10 @@ resource "aws_api_gateway_rest_api" "scizor_ai_api" {
   ]
 }
 
+# Note: Authentication is handled at the application level in NestJS using JwtAuthGuard
+# The application validates JWT tokens for secured endpoints
+# This provides more flexibility and better error handling
+
 resource "aws_api_gateway_resource" "ai_resource" {
   rest_api_id = aws_api_gateway_rest_api.scizor_ai_api.id
   parent_id   = aws_api_gateway_rest_api.scizor_ai_api.root_resource_id
@@ -25,11 +29,11 @@ resource "aws_api_gateway_resource" "ai_resource" {
 
 locals {
   endpoints = {
-    "enhance-prompt"  = { method = "POST" }
-    "generate-response" = { method = "POST" }
-    "text-to-speech"  = { method = "POST" }
-    "translate"       = { method = "POST" }
-    "health"          = { method = "GET" }
+    "enhance-prompt"  = { method = "POST", require_auth = true }
+    "generate-response" = { method = "POST", require_auth = true }
+    "text-to-speech"  = { method = "POST", require_auth = true }
+    "translate"       = { method = "POST", require_auth = true }
+    "health"          = { method = "GET", require_auth = false }
   }
 
   cors_enabled_endpoints = [
@@ -131,7 +135,7 @@ resource "aws_api_gateway_method" "endpoint" {
   rest_api_id  = aws_api_gateway_rest_api.scizor_ai_api.id
   resource_id  = aws_api_gateway_resource.endpoint_resources[each.key].id
   http_method  = each.value.method
-  authorization = "NONE"
+  authorization = "NONE"  # Authentication handled at application level
 }
 
 resource "aws_api_gateway_method" "auth" {

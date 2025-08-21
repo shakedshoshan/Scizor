@@ -103,3 +103,5 @@ resource "aws_lambda_permission" "apigw_lambda" {
   # The source ARN ensures that only our specific API Gateway can invoke the function.
   source_arn = "${aws_api_gateway_rest_api.scizor_ai_api.execution_arn}/*/*"
 }
+
+# Note: No separate authorizer permission needed as authentication is handled at application level

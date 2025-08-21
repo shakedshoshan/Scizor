@@ -118,17 +118,17 @@ let AiService = AiService_1 = class AiService {
             };
         }
     }
-    async enhancePrompt(enhancePromptDto) {
+    async enhancePrompt(userId, enhancePromptDto) {
         try {
             await this.ensureOpenAIInitialized();
-            const { user_id, prompt, enhancementType, context, targetAudience } = enhancePromptDto;
-            if (!user_id) {
+            const { prompt, enhancementType, context, targetAudience } = enhancePromptDto;
+            if (!userId) {
                 throw new common_1.BadRequestException('User ID is required to perform this operation.');
             }
             if (!prompt) {
                 throw new common_1.BadRequestException('Prompt text is required for enhancement.');
             }
-            const tokenResult = await this.deductTokensForOperation(user_id, 'ENHANCE_PROMPT');
+            const tokenResult = await this.deductTokensForOperation(userId, 'ENHANCE_PROMPT');
             if (!tokenResult.success) {
                 switch (tokenResult.errorType) {
                     case 'USER_NOT_FOUND':
@@ -165,17 +165,17 @@ let AiService = AiService_1 = class AiService {
             throw (0, utils_1.serviceErrorHandler)(error, 'enhance prompt');
         }
     }
-    async generateResponse(generateResponseDto) {
+    async generateResponse(userId, generateResponseDto) {
         try {
             await this.ensureOpenAIInitialized();
-            const { user_id, content, responseType, context, tone, maxLength } = generateResponseDto;
-            if (!user_id) {
+            const { content, responseType, context, tone, maxLength } = generateResponseDto;
+            if (!userId) {
                 throw new common_1.BadRequestException('User ID is required to perform this operation.');
             }
             if (!content) {
                 throw new common_1.BadRequestException('Content is required to generate a response.');
             }
-            const tokenResult = await this.deductTokensForOperation(user_id, 'GENERATE_RESPONSE');
+            const tokenResult = await this.deductTokensForOperation(userId, 'GENERATE_RESPONSE');
             if (!tokenResult.success) {
                 switch (tokenResult.errorType) {
                     case 'USER_NOT_FOUND':
@@ -261,17 +261,17 @@ let AiService = AiService_1 = class AiService {
         userPrompt += 'Please provide a relevant and helpful response.';
         return userPrompt;
     }
-    async textToSpeech(textToSpeechDto) {
+    async textToSpeech(userId, textToSpeechDto) {
         try {
             await this.ensureOpenAIInitialized();
-            const { user_id, text, voice, responseFormat, speed, model } = textToSpeechDto;
-            if (!user_id) {
+            const { text, voice, responseFormat, speed, model } = textToSpeechDto;
+            if (!userId) {
                 throw new common_1.BadRequestException('User ID is required to perform this operation.');
             }
             if (!text) {
                 throw new common_1.BadRequestException('Text content is required for text-to-speech conversion.');
             }
-            const tokenResult = await this.deductTokensForOperation(user_id, 'TEXT_TO_SPEECH');
+            const tokenResult = await this.deductTokensForOperation(userId, 'TEXT_TO_SPEECH');
             if (!tokenResult.success) {
                 switch (tokenResult.errorType) {
                     case 'USER_NOT_FOUND':
@@ -311,11 +311,11 @@ let AiService = AiService_1 = class AiService {
             throw (0, utils_1.serviceErrorHandler)(error, 'convert text to speech');
         }
     }
-    async translate(translateDto) {
+    async translate(userId, translateDto) {
         try {
             await this.ensureOpenAIInitialized();
-            const { user_id, text, to_language } = translateDto;
-            if (!user_id) {
+            const { text, to_language } = translateDto;
+            if (!userId) {
                 throw new common_1.BadRequestException('User ID is required to perform this operation.');
             }
             if (!text) {
@@ -324,7 +324,7 @@ let AiService = AiService_1 = class AiService {
             if (!to_language) {
                 throw new common_1.BadRequestException('Target language is required for translation.');
             }
-            const tokenResult = await this.deductTokensForOperation(user_id, 'TRANSLATE');
+            const tokenResult = await this.deductTokensForOperation(userId, 'TRANSLATE');
             if (!tokenResult.success) {
                 switch (tokenResult.errorType) {
                     case 'USER_NOT_FOUND':

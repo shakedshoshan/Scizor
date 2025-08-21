@@ -22,18 +22,12 @@ var EnhancementType;
     EnhancementType["FUN"] = "fun";
 })(EnhancementType || (exports.EnhancementType = EnhancementType = {}));
 class EnhancePromptDto {
-    user_id;
     prompt;
     enhancementType = EnhancementType.GENERAL;
     context;
     targetAudience;
 }
 exports.EnhancePromptDto = EnhancePromptDto;
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], EnhancePromptDto.prototype, "user_id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),

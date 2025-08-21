@@ -9,7 +9,7 @@ export declare class AiController {
     private readonly firestoreService;
     private readonly logger;
     constructor(aiService: AiService, firestoreService: FirestoreService);
-    enhancePrompt(enhancePromptDto: EnhancePromptDto): Promise<{
+    enhancePrompt(enhancePromptDto: EnhancePromptDto, req: any): Promise<{
         success: boolean;
         data: {
             enhancedPrompt: string;
@@ -26,7 +26,7 @@ export declare class AiController {
         message: string;
         data?: undefined;
     }>;
-    generateResponse(generateResponseDto: GenerateResponseDto): Promise<{
+    generateResponse(generateResponseDto: GenerateResponseDto, req: any): Promise<{
         success: boolean;
         data: {
             response: string;
@@ -43,7 +43,7 @@ export declare class AiController {
         message: string;
         data?: undefined;
     }>;
-    textToSpeech(textToSpeechDto: TextToSpeechDto): Promise<{
+    textToSpeech(textToSpeechDto: TextToSpeechDto, req: any): Promise<{
         statusCode: number;
         headers: {
             'Content-Type': string;
@@ -68,7 +68,7 @@ export declare class AiController {
         body: string;
         isBase64Encoded?: undefined;
     }>;
-    translate(translateDto: TranslateDto): Promise<{
+    translate(translateDto: TranslateDto, req: any): Promise<{
         success: boolean;
         data: {
             translatedText: string;

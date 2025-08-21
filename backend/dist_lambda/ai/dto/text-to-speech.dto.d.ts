@@ -13,7 +13,6 @@ export declare enum ResponseFormat {
     FLAC = "flac"
 }
 export declare class TextToSpeechDto {
-    user_id: string;
     text: string;
     voice?: VoiceType;
     responseFormat?: ResponseFormat;

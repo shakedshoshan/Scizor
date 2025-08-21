@@ -28,7 +28,6 @@ var ResponseFormat;
     ResponseFormat["FLAC"] = "flac";
 })(ResponseFormat || (exports.ResponseFormat = ResponseFormat = {}));
 class TextToSpeechDto {
-    user_id;
     text;
     voice = VoiceType.ALLOY;
     responseFormat = ResponseFormat.MP3;
@@ -36,11 +35,6 @@ class TextToSpeechDto {
     model = 'tts-1';
 }
 exports.TextToSpeechDto = TextToSpeechDto;
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], TextToSpeechDto.prototype, "user_id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),

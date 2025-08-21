@@ -8,7 +8,6 @@ export declare enum EnhancementType {
     FUN = "fun"
 }
 export declare class EnhancePromptDto {
-    user_id: string;
     prompt: string;
     enhancementType?: EnhancementType;
     context?: string;

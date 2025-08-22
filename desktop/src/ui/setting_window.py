@@ -12,43 +12,12 @@ from PyQt6.QtWidgets import (
     QTabWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont, QPixmap, QPainter, QPen, QBrush, QColor
+from PyQt6.QtGui import QIcon, QFont, QPixmap
+import os
 from database.db_connection import get_database
 from auth.device_auth import DeviceAuthManager
 import sys
 
-
-def create_power_icon(size=32, color=Qt.GlobalColor.white):
-    """Create a custom power icon similar to the one in the image"""
-    pixmap = QPixmap(size, size)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    
-    # Set pen for drawing - use QColor if string is passed
-    if isinstance(color, str):
-        pen = QPen(QColor(color))
-    else:
-        pen = QPen(color)
-    pen.setWidth(3)
-    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-    painter.setPen(pen)
-    
-    center = size // 2
-    radius = size // 3
-    
-    # Draw the vertical line at the top (power button line)
-    line_height = radius - 2
-    painter.drawLine(center, center - line_height, center, center - 2)
-    
-    # Draw the circle (incomplete circle - power button arc)
-    # Start from 45 degrees and draw 270 degrees (leaving gap at top)
-    arc_rect = pixmap.rect().adjusted(6, 6, -6, -6)
-    painter.drawArc(arc_rect, 45 * 16, 270 * 16)  # Qt uses 16ths of a degree
-    
-    painter.end()
-    return QIcon(pixmap)
 
 
 class CompactAuthWidget(QWidget):
@@ -616,11 +585,13 @@ class SettingsWindow(QDialog):
         header_layout.addWidget(title_label)
         header_layout.addStretch()
         
-        # Small shutdown button in top-right corner with custom power icon
-        power_icon = create_power_icon(24, Qt.GlobalColor.white)
+        # Small shutdown button in top-right corner with power icon
+        icon_path = os.path.join(os.path.dirname(__file__), "..", "resources", "icons", "power_icon.svg")
+        power_icon = QIcon(icon_path)
+        
         self.shutdown_btn = QPushButton()
         self.shutdown_btn.setIcon(power_icon)
-        self.shutdown_btn.setIconSize(QPixmap(24, 24).size())
+        self.shutdown_btn.setIconSize(QPixmap(20, 20).size())
         self.shutdown_btn.setToolTip("Shutdown Application")
         self.shutdown_btn.setFixedSize(36, 36)
         self.shutdown_btn.setStyleSheet("""

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Power button icon - white on transparent -->
-  <g fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Power button icon - white outline on transparent -->
+  <g fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <!-- Vertical line at top -->
-    <path d="M12 2v10"/>
-    <!-- Circular arc -->
-    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+    <line x1="12" y1="2" x2="12" y2="12"/>
+    <!-- Circular arc - incomplete circle -->
+    <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/>
   </g>
 </svg>

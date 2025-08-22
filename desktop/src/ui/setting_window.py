@@ -12,10 +12,40 @@ from PyQt6.QtWidgets import (
     QTabWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont, QPixmap
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QPainter, QPen, QBrush
 from database.db_connection import get_database
 from auth.device_auth import DeviceAuthManager
 import sys
+
+
+def create_power_icon(size=32, color="white"):
+    """Create a custom power icon similar to the one in the image"""
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    
+    # Set pen for drawing
+    pen = QPen(color)
+    pen.setWidth(3)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    painter.setPen(pen)
+    
+    center = size // 2
+    radius = size // 3
+    
+    # Draw the vertical line at the top (power button line)
+    line_height = radius - 2
+    painter.drawLine(center, center - line_height, center, center - 2)
+    
+    # Draw the circle (incomplete circle - power button arc)
+    # Start from 45 degrees and draw 270 degrees (leaving gap at top)
+    arc_rect = pixmap.rect().adjusted(6, 6, -6, -6)
+    painter.drawArc(arc_rect, 45 * 16, 270 * 16)  # Qt uses 16ths of a degree
+    
+    painter.end()
+    return QIcon(pixmap)
 
 
 class CompactAuthWidget(QWidget):
@@ -583,24 +613,28 @@ class SettingsWindow(QDialog):
         header_layout.addWidget(title_label)
         header_layout.addStretch()
         
-        # Small shutdown button in top-right corner
-        self.shutdown_btn = QPushButton("⏻")
+        # Small shutdown button in top-right corner with custom power icon
+        power_icon = create_power_icon(24, "white")
+        self.shutdown_btn = QPushButton()
+        self.shutdown_btn.setIcon(power_icon)
+        self.shutdown_btn.setIconSize(QPixmap(24, 24).size())
         self.shutdown_btn.setToolTip("Shutdown Application")
-        self.shutdown_btn.setFixedSize(32, 32)
+        self.shutdown_btn.setFixedSize(36, 36)
         self.shutdown_btn.setStyleSheet("""
             QPushButton {
-                background-color: #f44336;
+                background-color: #ef4444;
                 color: white;
                 border: none;
-                border-radius: 16px;
-                font-weight: bold;
-                font-size: 14px;
+                border-radius: 18px;
+                padding: 6px;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
+                background-color: #dc2626;
+                transform: scale(1.05);
             }
             QPushButton:pressed {
-                background-color: #b71c1c;
+                background-color: #b91c1c;
+                transform: scale(0.95);
             }
         """)
         header_layout.addWidget(self.shutdown_btn)

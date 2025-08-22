@@ -12,13 +12,13 @@ from PyQt6.QtWidgets import (
     QTabWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont, QPixmap, QPainter, QPen, QBrush
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QPainter, QPen, QBrush, QColor
 from database.db_connection import get_database
 from auth.device_auth import DeviceAuthManager
 import sys
 
 
-def create_power_icon(size=32, color="white"):
+def create_power_icon(size=32, color=Qt.GlobalColor.white):
     """Create a custom power icon similar to the one in the image"""
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.GlobalColor.transparent)
@@ -26,8 +26,11 @@ def create_power_icon(size=32, color="white"):
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     
-    # Set pen for drawing
-    pen = QPen(color)
+    # Set pen for drawing - use QColor if string is passed
+    if isinstance(color, str):
+        pen = QPen(QColor(color))
+    else:
+        pen = QPen(color)
     pen.setWidth(3)
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     painter.setPen(pen)
@@ -614,7 +617,7 @@ class SettingsWindow(QDialog):
         header_layout.addStretch()
         
         # Small shutdown button in top-right corner with custom power icon
-        power_icon = create_power_icon(24, "white")
+        power_icon = create_power_icon(24, Qt.GlobalColor.white)
         self.shutdown_btn = QPushButton()
         self.shutdown_btn.setIcon(power_icon)
         self.shutdown_btn.setIconSize(QPixmap(24, 24).size())

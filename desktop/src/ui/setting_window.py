@@ -696,17 +696,24 @@ class SettingsWindow(QDialog):
                 background-color: white;
                 padding: 8px;
                 font-size: 12px;
+                color: #333;
             }
             QListWidget::item {
                 border-bottom: 1px solid #eee;
                 padding: 12px 8px;
                 margin: 3px 0px;
-                min-height: 24px;
+                min-height: 40px;
+                color: #333;
+                background-color: transparent;
             }
             QListWidget::item:selected {
                 background-color: #e3f2fd;
                 border: 1px dotted #2196f3;
                 border-radius: 4px;
+                color: #1976d2;
+            }
+            QListWidget::item:hover {
+                background-color: #f5f5f5;
             }
         """)
         self.features_list.setMinimumHeight(200)

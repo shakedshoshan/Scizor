@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "firebase": "^10.14.1",
     "firebaseui": "^6.1.0",
     "next": "15.4.5",

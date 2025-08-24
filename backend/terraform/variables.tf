@@ -41,3 +41,33 @@ variable "jwt_secret" {
   type        = string
   sensitive   = true
 }
+
+# Grafana Cloud variables
+variable "grafana_cloud_access_token" {
+  description = "Grafana Cloud access policy token with required scopes"
+  type        = string
+  sensitive   = true
+}
+
+variable "grafana_stack_slug" {
+  description = "Grafana Cloud stack slug/name for monitoring"
+  type        = string
+}
+
+variable "grafana_service_account_key" {
+  description = "Grafana service account key for dashboard management"
+  type        = string
+  sensitive   = true
+}
+
+variable "grafana_account_id" {
+  description = "Grafana AWS account ID for cross-account access"
+  type        = string
+  default     = "008923505280"  # Grafana Labs AWS account ID
+}
+
+variable "grafana_external_id" {
+  description = "External ID for Grafana cross-account role assumption"
+  type        = string
+  sensitive   = true
+}

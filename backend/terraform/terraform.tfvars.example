@@ -1,0 +1,26 @@
+# Example Terraform variables file for Scizor AI Backend with Grafana monitoring
+# Copy this file to terraform.tfvars and fill in your actual values
+
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "prod"
+
+# OpenAI Configuration
+openai_api_key = "sk-your-openai-api-key-here"
+
+# Firebase Configuration
+firebase_project_id    = "your-firebase-project-id"
+firebase_client_email  = "your-service-account@your-project.iam.gserviceaccount.com"
+firebase_private_key   = "-----BEGIN PRIVATE KEY-----\nYour-Firebase-Private-Key-Here\n-----END PRIVATE KEY-----"
+
+# JWT Configuration
+jwt_secret = "your-jwt-secret-minimum-32-characters-long"
+
+# Grafana Cloud Configuration
+grafana_cloud_access_token   = "your-grafana-cloud-access-policy-token"
+grafana_stack_slug          = "your-grafana-stack-slug"
+grafana_service_account_key = "your-grafana-service-account-key"
+grafana_external_id         = "your-unique-external-id-for-cross-account-access"
+
+# Optional: Override default Grafana account ID if using Enterprise
+# grafana_account_id = "008923505280"

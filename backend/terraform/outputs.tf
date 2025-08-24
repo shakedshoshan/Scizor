@@ -54,3 +54,36 @@ output "authentication_info" {
     auth_endpoints = ["auth/create-user-token", "auth/device/token", "auth/device/refresh"]
   }
 }
+
+# Monitoring outputs
+output "grafana_cloudwatch_role_arn" {
+  description = "ARN of the IAM role for Grafana CloudWatch access"
+  value       = aws_iam_role.grafana_cloudwatch_role.arn
+}
+
+output "cloudwatch_log_groups" {
+  description = "CloudWatch log groups for monitoring"
+  value = {
+    api_gateway = aws_cloudwatch_log_group.api_gateway_logs.name
+    lambda      = aws_cloudwatch_log_group.lambda_logs.name
+  }
+}
+
+output "monitoring_dashboard_url" {
+  description = "URL to the Grafana monitoring dashboard"
+  value       = try("${data.grafana_cloud_stack.monitoring_stack.url}/d/scizor-ai-backend-monitoring", "Configure Grafana Cloud first")
+}
+
+output "grafana_integration_info" {
+  description = "Information for setting up Grafana Cloud integration"
+  value = {
+    role_arn          = aws_iam_role.grafana_cloudwatch_role.arn
+    external_id_note  = "Use the external ID from your Grafana Cloud AWS integration setup"
+    regions           = [var.aws_region]
+    scrape_jobs = [
+      "scizor-ai-api-gateway-metrics",
+      "scizor-ai-lambda-metrics", 
+      "scizor-ai-custom-metrics"
+    ]
+  }
+}

@@ -75,7 +75,7 @@ class HotkeysTab(QWidget):
             "🤖", 
             "AI Prompt Enhancement", 
             "Enhance selected text using AI and replace it",
-            "Ctrl+Alt+H"
+            "ctrl+alt+e"
         )
         
         # Add separator

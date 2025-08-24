@@ -33,7 +33,7 @@ def test_hotkey_enhance():
     
     print("\nHotkey Enhance Prompt Test Instructions:")
     print("1. Select some text in any application")
-    print("2. Press Ctrl+Alt+H to trigger the enhance prompt hotkey")
+    print("2. Press ctrl+alt+e to trigger the enhance prompt hotkey")
     print("3. The selected text should be enhanced and replaced directly")
     print("4. If enhancement fails, a fallback signal will be emitted")
     print("5. Press Ctrl+C to exit this test")

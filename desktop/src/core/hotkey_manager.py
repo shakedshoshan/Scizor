@@ -6,7 +6,7 @@ Handles global hotkeys for dashboard control
 Global Hotkeys:
 - Ctrl+Alt+S: Toggle dashboard visibility
 - Ctrl+Alt+N: Create note from selected text
-- Ctrl+Alt+H: Enhance selected text using AI
+- ctrl+alt+e: Enhance selected text using AI
 - Ctrl+Alt+G: Generate AI response for selected text (shows in popup)
 - Ctrl+Alt+T: Translate selected text to default language (shows in popup)
 - Ctrl+Alt+R: Convert selected text to speech
@@ -288,7 +288,7 @@ class HotkeyManager(QObject):
             # Register the hotkeys
             keyboard.add_hotkey('ctrl+alt+s', self._on_toggle_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+n', self._on_create_note_hotkey, suppress=True)
-            keyboard.add_hotkey('ctrl+alt+h', self._on_enhance_prompt_hotkey, suppress=True)
+            keyboard.add_hotkey('ctrl+alt+e', self._on_enhance_prompt_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+g', self._on_generate_response_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+t', self._on_translate_hotkey, suppress=True)
             keyboard.add_hotkey('ctrl+alt+r', self._on_text_to_speech_hotkey, suppress=True)
@@ -397,7 +397,7 @@ class HotkeyManager(QObject):
                 # Start enhancement with spinner - use signals for thread safety
                 self._enhance_with_spinner(selected_text, user_id)
             else:
-                print("No text selected. Please select text first, then press Ctrl+Alt+H.")
+                print("No text selected. Please select text first, then press ctrl+alt+e.")
                 
         except Exception as e:
             print(f"Error in enhance prompt hotkey: {e}")

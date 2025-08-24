@@ -2,12 +2,12 @@
 
 ## Overview
 
-The `Ctrl+Alt+H` hotkey allows users to quickly enhance selected text using AI. When triggered, it captures the selected text, sends it to the AI enhancement service, and automatically replaces the original text with the enhanced version.
+The `ctrl+alt+e` hotkey allows users to quickly enhance selected text using AI. When triggered, it captures the selected text, sends it to the AI enhancement service, and automatically replaces the original text with the enhanced version.
 
 ## How It Works
 
 1. **Text Selection**: User selects text in any application
-2. **Hotkey Trigger**: User presses `Ctrl+Alt+H`
+2. **Hotkey Trigger**: User presses `ctrl+alt+e`
 3. **Text Capture**: The system copies the selected text to clipboard
 4. **Direct AI Enhancement**: The text is sent directly to the backend AI service for enhancement
 5. **Automatic Replacement**: The enhanced text automatically replaces the original selection
@@ -27,7 +27,7 @@ The `Ctrl+Alt+H` hotkey allows users to quickly enhance selected text using AI. 
 - Added `enhance_prompt_requested` signal (fallback only)
 - Added `_on_enhance_prompt_hotkey()` method
 - Added `_enhance_and_replace_text()` method for direct enhancement
-- Registers `Ctrl+Alt+H` hotkey
+- Registers `ctrl+alt+e` hotkey
 - Directly calls enhance prompt service and replaces text
 
 ### Enhance Prompt Panel (`enhance_prompt_panel.py`)
@@ -39,14 +39,14 @@ The `Ctrl+Alt+H` hotkey allows users to quickly enhance selected text using AI. 
 ## Usage Instructions
 
 1. **Select Text**: Highlight the text you want to enhance in any application
-2. **Press Hotkey**: Press `Ctrl+Alt+H`
+2. **Press Hotkey**: Press `ctrl+alt+e`
 3. **Direct Enhancement**: The text is enhanced directly without UI interaction
 4. **Automatic Replacement**: The enhanced text automatically replaces your selection
 5. **Console Feedback**: Success/error messages appear in the console
 
 ## Error Handling
 
-- **No Text Selected**: Shows message "No text selected. Please select text first, then press Ctrl+Alt+H."
+- **No Text Selected**: Shows message "No text selected. Please select text first, then press ctrl+alt+e."
 - **API Connection Error**: Falls back to UI-based enhancement via signal
 - **Enhancement Failure**: Shows error message in console and falls back to UI-based enhancement
 
@@ -68,7 +68,7 @@ python test_hotkey_enhance.py
 
 The hotkey can be modified in `hotkey_manager.py`:
 ```python
-keyboard.add_hotkey('ctrl+alt+h', self._on_enhance_prompt_hotkey, suppress=True)
+keyboard.add_hotkey('ctrl+alt+e', self._on_enhance_prompt_hotkey, suppress=True)
 ```
 
 ## Troubleshooting

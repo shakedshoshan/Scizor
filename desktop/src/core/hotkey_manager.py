@@ -6,7 +6,7 @@ Handles global hotkeys for dashboard control
 Global Hotkeys:
 - Ctrl+Alt+S: Toggle dashboard visibility
 - Ctrl+Alt+N: Create note from selected text
-- ctrl+alt+e: Enhance selected text using AI
+- Ctrl+Alt+E: Enhance selected text using AI
 - Ctrl+Alt+G: Generate AI response for selected text (shows in popup)
 - Ctrl+Alt+T: Translate selected text to default language (shows in popup)
 - Ctrl+Alt+R: Convert selected text to speech
@@ -24,6 +24,7 @@ from PyQt6.QtGui import QCursor
 from core.clipboard_manager import get_clipboard_manager
 from ui.component.spinner import WaitingSpinner
 from ui.component.popup_window import show_popup
+from ui.component.alert import show_error_alert, show_warning_alert, show_info_alert, show_success_alert
 from core.text_to_speech import TextToSpeech
 from auth.device_auth import DeviceAuthManager
 from database.db_connection import get_database
@@ -207,6 +208,10 @@ class HotkeyManager(QObject):
     hide_spinner_requested = pyqtSignal()  # Signal to hide spinner
     update_spinner_text_requested = pyqtSignal(str)  # Signal to update spinner text
     show_popup_requested = pyqtSignal(str, str)  # Signal to show popup (title, message)
+    show_error_alert_requested = pyqtSignal(str)  # Signal to show error alert
+    show_warning_alert_requested = pyqtSignal(str)  # Signal to show warning alert
+    show_info_alert_requested = pyqtSignal(str)  # Signal to show info alert
+    show_success_alert_requested = pyqtSignal(str)  # Signal to show success alert
     
     def __init__(self):
         """Initialize the hotkey manager"""
@@ -225,6 +230,10 @@ class HotkeyManager(QObject):
         self.hide_spinner_requested.connect(self._hide_spinner_main_thread)
         self.update_spinner_text_requested.connect(self._update_spinner_text_main_thread)
         self.show_popup_requested.connect(self._show_popup_main_thread)
+        self.show_error_alert_requested.connect(self._show_error_alert_main_thread)
+        self.show_warning_alert_requested.connect(self._show_warning_alert_main_thread)
+        self.show_info_alert_requested.connect(self._show_info_alert_main_thread)
+        self.show_success_alert_requested.connect(self._show_success_alert_main_thread)
     
     def get_authenticated_user(self) -> Optional[Dict]:
         """Get the currently authenticated user from the database"""
@@ -328,21 +337,27 @@ class HotkeyManager(QObject):
             # Get the selected text from clipboard
             selected_text = pyperclip.paste().strip()
             
-            # Restore original clipboard content
-            if original_clipboard != selected_text:
-                pyperclip.copy(original_clipboard)
-            
+            # Check if new text was actually selected
             if selected_text and selected_text != original_clipboard:
-                # Save the copied text to clipboard history using thread-safe method
-                try:
-                    self.clipboard_manager.add_to_history(selected_text)
-                except Exception as e:
-                    print(f"Failed to add to clipboard history: {e}")
-                
-                # Emit signal for note creation
-                self.create_note_requested.emit(selected_text)
+                # New text was selected - use that
+                text_to_process = selected_text
+                # Restore original clipboard content
+                pyperclip.copy(original_clipboard)
+                print(f"Using newly selected text for note creation")
             else:
+                # No new text was selected - show error
                 print("No text selected. Please select text first, then press Ctrl+Alt+N.")
+                self.show_warning_alert_requested.emit("No text selected. Please select text first, then press Ctrl+Alt+N.")
+                return
+            
+            # Save the text to clipboard history using thread-safe method
+            try:
+                self.clipboard_manager.add_to_history(text_to_process)
+            except Exception as e:
+                print(f"Failed to add to clipboard history: {e}")
+            
+            # Emit signal for note creation
+            self.create_note_requested.emit(text_to_process)
                 
         except Exception as e:
             print(f"Error in create note hotkey: {e}")
@@ -354,12 +369,14 @@ class HotkeyManager(QObject):
             user_info = self.get_authenticated_user()
             if not user_info:
                 print("User not authenticated. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for text enhancement")
                 return
             
             user_id = user_info.get('user_id')
             print(f"User ID: {user_id}")
             if not user_id:
                 print("No user ID available. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for text enhancement")
                 return
             
             # Store current clipboard content
@@ -374,30 +391,38 @@ class HotkeyManager(QObject):
             # Get the selected text from clipboard
             selected_text = pyperclip.paste().strip()
             
-            # Restore original clipboard content
-            if original_clipboard != selected_text:
-                pyperclip.copy(original_clipboard)
-            
+            # Check if new text was actually selected
             if selected_text and selected_text != original_clipboard:
-                # Validate text length and content
-                if len(selected_text) < 3:
-                    print("Selected text is too short. Please select more text to enhance.")
-                    return
-                
-                if len(selected_text) > 2000:
-                    print("Selected text is too long. Please select a shorter text to enhance.")
-                    return
-                
-                # Save the copied text to clipboard history using thread-safe method
-                try:
-                    self.clipboard_manager.add_to_history(selected_text)
-                except Exception as e:
-                    print(f"Failed to add to clipboard history: {e}")
-                
-                # Start enhancement with spinner - use signals for thread safety
-                self._enhance_with_spinner(selected_text, user_id)
+                # New text was selected - use that
+                text_to_process = selected_text
+                # Restore original clipboard content
+                pyperclip.copy(original_clipboard)
+                print(f"Using newly selected text for enhancement")
             else:
-                print("No text selected. Please select text first, then press ctrl+alt+e.")
+                # No new text was selected - show error
+                print("No text selected. Please select text first, then press Ctrl+Alt+E.")
+                self.show_warning_alert_requested.emit("No text selected. Please select text first, then press Ctrl+Alt+E.")
+                return
+            
+            # Validate text length and content
+            if len(text_to_process) < 3:
+                print("Text is too short. Please provide more text to enhance.")
+                self.show_warning_alert_requested.emit("Text is too short. Please provide more text to enhance.")
+                return
+            
+            if len(text_to_process) > 2000:
+                print("Text is too long. Please provide shorter text to enhance.")
+                self.show_warning_alert_requested.emit("Text is too long. Please provide shorter text to enhance.")
+                return
+            
+            # Save the text to clipboard history using thread-safe method
+            try:
+                self.clipboard_manager.add_to_history(text_to_process)
+            except Exception as e:
+                print(f"Failed to add to clipboard history: {e}")
+            
+            # Start enhancement with spinner - use signals for thread safety
+            self._enhance_with_spinner(text_to_process, user_id)
                 
         except Exception as e:
             print(f"Error in enhance prompt hotkey: {e}")
@@ -409,11 +434,13 @@ class HotkeyManager(QObject):
             user_info = self.get_authenticated_user()
             if not user_info:
                 print("User not authenticated. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for AI response generation")
                 return
             
             user_id = user_info.get('user_id')
             if not user_id:
                 print("No user ID available. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for AI response generation")
                 return
             
             # Store current clipboard content
@@ -428,30 +455,38 @@ class HotkeyManager(QObject):
             # Get the selected text from clipboard
             selected_text = pyperclip.paste().strip()
             
-            # Restore original clipboard content
-            if original_clipboard != selected_text:
-                pyperclip.copy(original_clipboard)
-            
+            # Check if new text was actually selected
             if selected_text and selected_text != original_clipboard:
-                # Validate text length and content
-                if len(selected_text) < 3:
-                    print("Selected text is too short. Please select more text to generate a response for.")
-                    return
-                
-                if len(selected_text) > 2000:
-                    print("Selected text is too long. Please select a shorter text to generate a response for.")
-                    return
-                
-                # Save the copied text to clipboard history using thread-safe method
-                try:
-                    self.clipboard_manager.add_to_history(selected_text)
-                except Exception as e:
-                    print(f"Failed to add to clipboard history: {e}")
-                
-                # Start response generation with spinner - use signals for thread safety
-                self._generate_with_spinner(selected_text, user_id)
+                # New text was selected - use that
+                text_to_process = selected_text
+                # Restore original clipboard content
+                pyperclip.copy(original_clipboard)
+                print(f"Using newly selected text for response generation")
             else:
+                # No new text was selected - show error
                 print("No text selected. Please select text first, then press Ctrl+Alt+G.")
+                self.show_warning_alert_requested.emit("No text selected. Please select text first, then press Ctrl+Alt+G.")
+                return
+            
+            # Validate text length and content
+            if len(text_to_process) < 3:
+                print("Text is too short. Please provide more text to generate a response for.")
+                self.show_warning_alert_requested.emit("Text is too short. Please provide more text to generate a response for.")
+                return
+            
+            if len(text_to_process) > 2000:
+                print("Text is too long. Please provide shorter text to generate a response for.")
+                self.show_warning_alert_requested.emit("Text is too long. Please provide shorter text to generate a response for.")
+                return
+            
+            # Save the text to clipboard history using thread-safe method
+            try:
+                self.clipboard_manager.add_to_history(text_to_process)
+            except Exception as e:
+                print(f"Failed to add to clipboard history: {e}")
+            
+            # Start response generation with spinner - use signals for thread safety
+            self._generate_with_spinner(text_to_process, user_id)
                 
         except Exception as e:
             print(f"Error in generate response hotkey: {e}")
@@ -463,11 +498,13 @@ class HotkeyManager(QObject):
             user_info = self.get_authenticated_user()
             if not user_info:
                 print("User not authenticated. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for translation")
                 return
             
             user_id = user_info.get('user_id')
             if not user_id:
                 print("No user ID available. Please authenticate first.")
+                self.show_error_alert_requested.emit("Authentication required for translation")
                 return
             
             # Get current translation language from database (always fresh - not cached)
@@ -486,30 +523,38 @@ class HotkeyManager(QObject):
             # Get the selected text from clipboard
             selected_text = pyperclip.paste().strip()
             
-            # Restore original clipboard content
-            if original_clipboard != selected_text:
-                pyperclip.copy(original_clipboard)
-            
+            # Check if new text was actually selected
             if selected_text and selected_text != original_clipboard:
-                # Validate text length and content
-                if len(selected_text) < 1:
-                    print("Selected text is too short. Please select text to translate.")
-                    return
-                
-                if len(selected_text) > 5000:
-                    print("Selected text is too long. Please select a shorter text to translate.")
-                    return
-                
-                # Save the copied text to clipboard history using thread-safe method
-                try:
-                    self.clipboard_manager.add_to_history(selected_text)
-                except Exception as e:
-                    print(f"Failed to add to clipboard history: {e}")
-                
-                # Start translation with spinner - use signals for thread safety
-                self._translate_with_spinner(selected_text, current_language, user_id)
+                # New text was selected - use that
+                text_to_process = selected_text
+                # Restore original clipboard content
+                pyperclip.copy(original_clipboard)
+                print(f"Using newly selected text for translation")
             else:
+                # No new text was selected - show error
                 print("No text selected. Please select text first, then press Ctrl+Alt+T.")
+                self.show_warning_alert_requested.emit("No text selected. Please select text first, then press Ctrl+Alt+T.")
+                return
+            
+            # Validate text length and content
+            if len(text_to_process) < 1:
+                print("Text is too short. Please provide text to translate.")
+                self.show_warning_alert_requested.emit("Text is too short. Please provide text to translate.")
+                return
+            
+            if len(text_to_process) > 5000:
+                print("Text is too long. Please provide shorter text to translate.")
+                self.show_warning_alert_requested.emit("Text is too long. Please provide shorter text to translate.")
+                return
+            
+            # Save the text to clipboard history using thread-safe method
+            try:
+                self.clipboard_manager.add_to_history(text_to_process)
+            except Exception as e:
+                print(f"Failed to add to clipboard history: {e}")
+            
+            # Start translation with spinner - use signals for thread safety
+            self._translate_with_spinner(text_to_process, current_language, user_id)
                 
         except Exception as e:
             print(f"Error in translate hotkey: {e}")
@@ -540,26 +585,33 @@ class HotkeyManager(QObject):
             # Get the selected text from clipboard
             selected_text = pyperclip.paste().strip()
             
-            # Restore original clipboard content
-            if original_clipboard != selected_text:
-                pyperclip.copy(original_clipboard)
-            
+            # Check if new text was actually selected
             if selected_text and selected_text != original_clipboard:
-                # Validate text length
-                if len(selected_text) > 10000:
-                    print("Selected text is too long. Please select a shorter text to convert to speech.")
-                    return
-                
-                # Save the copied text to clipboard history using thread-safe method
-                try:
-                    self.clipboard_manager.add_to_history(selected_text)
-                except Exception as e:
-                    print(f"Failed to add to clipboard history: {e}")
-                
-                # Start text-to-speech conversion with spinner - use signals for thread safety
-                self._text_to_speech_with_spinner(selected_text, user_id)
+                # New text was selected - use that
+                text_to_process = selected_text
+                # Restore original clipboard content
+                pyperclip.copy(original_clipboard)
+                print(f"Using newly selected text for text-to-speech")
             else:
+                # No new text was selected - show error
                 print("No text selected. Please select text first, then press Ctrl+Alt+R.")
+                self.show_warning_alert_requested.emit("No text selected. Please select text first, then press Ctrl+Alt+R.")
+                return
+            
+            # Validate text length
+            if len(text_to_process) > 10000:
+                print("Text is too long. Please provide shorter text to convert to speech.")
+                self.show_warning_alert_requested.emit("Text is too long. Please provide shorter text to convert to speech.")
+                return
+            
+            # Save the text to clipboard history using thread-safe method
+            try:
+                self.clipboard_manager.add_to_history(text_to_process)
+            except Exception as e:
+                print(f"Failed to add to clipboard history: {e}")
+            
+            # Start text-to-speech conversion with spinner - use signals for thread safety
+            self._text_to_speech_with_spinner(text_to_process, user_id)
                 
         except Exception as e:
             print(f"Error in text-to-speech hotkey: {e}")
@@ -654,6 +706,7 @@ class HotkeyManager(QObject):
                 self.update_spinner_text_requested.emit("No result received")
                 QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
                 print("Failed to enhance text. No result received.")
+                self.show_error_alert_requested.emit("Failed to enhance text. No result received.")
                 
         except Exception as e:
             print(f"Error completing enhancement: {e}")
@@ -663,8 +716,8 @@ class HotkeyManager(QObject):
         """Handle enhancement error"""
         try:
             print(f"Enhancement error: {error_msg}")
-            self.update_spinner_text_requested.emit("Error occurred")
-            QTimer.singleShot(2000, lambda: self.hide_spinner_requested.emit())
+            self.hide_spinner_requested.emit()
+            self.show_error_alert_requested.emit(f"Enhancement failed: {error_msg}")
         except Exception as e:
             print(f"Error handling enhancement error: {e}")
             self.hide_spinner_requested.emit()
@@ -811,6 +864,38 @@ class HotkeyManager(QObject):
             if "Response Generated" in title:
                 pyperclip.copy(message)
                 print("Response copied to clipboard as fallback")
+    
+    @pyqtSlot(str)
+    def _show_error_alert_main_thread(self, message: str):
+        """Show error alert in main thread"""
+        try:
+            show_error_alert(message)
+        except Exception as e:
+            print(f"Error showing error alert: {e}")
+    
+    @pyqtSlot(str)
+    def _show_warning_alert_main_thread(self, message: str):
+        """Show warning alert in main thread"""
+        try:
+            show_warning_alert(message)
+        except Exception as e:
+            print(f"Error showing warning alert: {e}")
+    
+    @pyqtSlot(str)
+    def _show_info_alert_main_thread(self, message: str):
+        """Show info alert in main thread"""
+        try:
+            show_info_alert(message)
+        except Exception as e:
+            print(f"Error showing info alert: {e}")
+    
+    @pyqtSlot(str)
+    def _show_success_alert_main_thread(self, message: str):
+        """Show success alert in main thread"""
+        try:
+            show_success_alert(message)
+        except Exception as e:
+            print(f"Error showing success alert: {e}")
             
     def _enhance_and_replace_text(self, text: str):
         """Legacy method - kept for compatibility"""

@@ -14,6 +14,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
+import { AuthService } from '../auth/auth.service';
+import { FirestoreService } from '../auth/firestore.service';
 import { EnhancementType } from './dto/enhance-prompt.dto';
 import { ResponseType } from './dto/generate-response.dto';
 
@@ -27,13 +29,32 @@ describe('AiController', () => {
     healthCheck: jest.fn(),
   };
 
+  const mockAuthService = {
+    verifyToken: jest.fn(),
+  };
+
+  const mockFirestoreService = {
+    deductUserTokens: jest.fn(),
+  };
+
   beforeEach(async () => {
+    // Set JWT_SECRET environment variable
+    process.env.JWT_SECRET = 'test-jwt-secret-key-that-is-at-least-32-characters-long';
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AiController],
       providers: [
         {
           provide: AiService,
           useValue: mockAiService,
+        },
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
+        },
+        {
+          provide: FirestoreService,
+          useValue: mockFirestoreService,
         },
       ],
     }).compile();
@@ -47,6 +68,8 @@ describe('AiController', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    // Clean up environment variable
+    delete process.env.JWT_SECRET;
   });
 
   describe('enhancePrompt', () => {
@@ -57,6 +80,12 @@ describe('AiController', () => {
       targetAudience: 'Intermediate developers',
     };
 
+    const mockRequest = {
+      user: {
+        userId: 'test-user-123',
+      },
+    };
+
     it('should enhance prompt successfully', async () => {
       const mockResult = {
         enhancedPrompt: 'Enhanced prompt with more context and specificity',
@@ -64,22 +93,32 @@ describe('AiController', () => {
 
       mockAiService.enhancePrompt.mockResolvedValue(mockResult);
 
-      const result = await controller.enhancePrompt(mockEnhancePromptDto);
+      const result = await controller.enhancePrompt(mockEnhancePromptDto, mockRequest);
 
       expect(result).toEqual({
         success: true,
         data: mockResult,
         message: 'Prompt enhanced successfully',
       });
-      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith(mockEnhancePromptDto);
+      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith('test-user-123', mockEnhancePromptDto);
     });
 
     it('should handle service errors', async () => {
       const error = new BadRequestException('Invalid API key');
       mockAiService.enhancePrompt.mockRejectedValue(error);
 
-      await expect(controller.enhancePrompt(mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
-      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith(mockEnhancePromptDto);
+      const result = await controller.enhancePrompt(mockEnhancePromptDto, mockRequest);
+      
+      expect(result).toEqual({
+        success: false,
+        message: 'Prompt enhancement failed',
+        error: {
+          type: 'BadRequestException',
+          message: 'Invalid API key',
+          timestamp: expect.any(String),
+        },
+      });
+      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith('test-user-123', mockEnhancePromptDto);
     });
 
     it('should handle missing enhancement type', async () => {
@@ -89,10 +128,10 @@ describe('AiController', () => {
       const mockResult = { enhancedPrompt: 'Enhanced prompt' };
       mockAiService.enhancePrompt.mockResolvedValue(mockResult);
 
-      const result = await controller.enhancePrompt(dtoWithoutType);
+      const result = await controller.enhancePrompt(dtoWithoutType, mockRequest);
 
       expect(result.success).toBe(true);
-      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith(dtoWithoutType);
+      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith('test-user-123', dtoWithoutType);
     });
   });
 
@@ -105,6 +144,12 @@ describe('AiController', () => {
       maxLength: '300 words',
     };
 
+    const mockRequest = {
+      user: {
+        userId: 'test-user-123',
+      },
+    };
+
     it('should generate response successfully', async () => {
       const mockResult = {
         response: 'Here is a comprehensive explanation of binary search...',
@@ -112,22 +157,32 @@ describe('AiController', () => {
 
       mockAiService.generateResponse.mockResolvedValue(mockResult);
 
-      const result = await controller.generateResponse(mockGenerateResponseDto);
+      const result = await controller.generateResponse(mockGenerateResponseDto, mockRequest);
 
       expect(result).toEqual({
         success: true,
         data: mockResult,
         message: 'Response generated successfully',
       });
-      expect(mockAiService.generateResponse).toHaveBeenCalledWith(mockGenerateResponseDto);
+      expect(mockAiService.generateResponse).toHaveBeenCalledWith('test-user-123', mockGenerateResponseDto);
     });
 
     it('should handle service errors', async () => {
       const error = new ServiceUnavailableException('OpenAI service unavailable');
       mockAiService.generateResponse.mockRejectedValue(error);
 
-      await expect(controller.generateResponse(mockGenerateResponseDto)).rejects.toThrow(ServiceUnavailableException);
-      expect(mockAiService.generateResponse).toHaveBeenCalledWith(mockGenerateResponseDto);
+      const result = await controller.generateResponse(mockGenerateResponseDto, mockRequest);
+      
+      expect(result).toEqual({
+        success: false,
+        message: 'Response generation failed',
+        error: {
+          type: 'ServiceUnavailableException',
+          message: 'OpenAI service unavailable',
+          timestamp: expect.any(String),
+        },
+      });
+      expect(mockAiService.generateResponse).toHaveBeenCalledWith('test-user-123', mockGenerateResponseDto);
     });
 
     it('should handle missing response type', async () => {
@@ -137,10 +192,10 @@ describe('AiController', () => {
       const mockResult = { response: 'Generated response' };
       mockAiService.generateResponse.mockResolvedValue(mockResult);
 
-      const result = await controller.generateResponse(dtoWithoutType);
+      const result = await controller.generateResponse(dtoWithoutType, mockRequest);
 
       expect(result.success).toBe(true);
-      expect(mockAiService.generateResponse).toHaveBeenCalledWith(dtoWithoutType);
+      expect(mockAiService.generateResponse).toHaveBeenCalledWith('test-user-123', dtoWithoutType);
     });
   });
 
@@ -191,6 +246,12 @@ describe('AiController', () => {
   });
 
   describe('logging', () => {
+    const mockRequest = {
+      user: {
+        userId: 'test-user-123',
+      },
+    };
+
     it('should log enhancement requests', async () => {
       const mockDto = { prompt: 'Test prompt', enhancementType: EnhancementType.CODE };
       const mockResult = { enhancedPrompt: 'Enhanced prompt' };
@@ -198,10 +259,10 @@ describe('AiController', () => {
 
       const logSpy = jest.spyOn(controller['logger'], 'log');
 
-      await controller.enhancePrompt(mockDto);
+      await controller.enhancePrompt(mockDto, mockRequest);
 
-      expect(logSpy).toHaveBeenCalledWith('Enhancing prompt with type: code');
-      expect(logSpy).toHaveBeenCalledWith('Prompt enhancement completed successfully');
+      expect(logSpy).toHaveBeenCalledWith('Enhancing prompt for user: test-user-123 with type: code');
+      expect(logSpy).toHaveBeenCalledWith('Prompt enhancement completed successfully for user: test-user-123');
     });
 
     it('should log response generation requests', async () => {
@@ -211,10 +272,10 @@ describe('AiController', () => {
 
       const logSpy = jest.spyOn(controller['logger'], 'log');
 
-      await controller.generateResponse(mockDto);
+      await controller.generateResponse(mockDto, mockRequest);
 
-      expect(logSpy).toHaveBeenCalledWith('Generating response with type: educational');
-      expect(logSpy).toHaveBeenCalledWith('Response generation completed successfully');
+      expect(logSpy).toHaveBeenCalledWith('Generating response for user: test-user-123 with type: educational');
+      expect(logSpy).toHaveBeenCalledWith('Response generation completed successfully for user: test-user-123');
     });
 
     it('should log errors', async () => {
@@ -224,19 +285,26 @@ describe('AiController', () => {
 
       const errorLogSpy = jest.spyOn(controller['logger'], 'error');
 
-      await expect(controller.enhancePrompt(mockDto)).rejects.toThrow(BadRequestException);
+      const result = await controller.enhancePrompt(mockDto, mockRequest);
 
-      expect(errorLogSpy).toHaveBeenCalledWith('Prompt enhancement failed:', 'Test error');
+      expect(result.success).toBe(false);
+      expect(errorLogSpy).toHaveBeenCalledWith('Prompt enhancement failed for user: test-user-123:', 'Test error');
     });
   });
 
   describe('HTTP status codes', () => {
+    const mockRequest = {
+      user: {
+        userId: 'test-user-123',
+      },
+    };
+
     it('should return 200 status for successful requests', async () => {
       const mockDto = { prompt: 'Test prompt' };
       const mockResult = { enhancedPrompt: 'Enhanced prompt' };
       mockAiService.enhancePrompt.mockResolvedValue(mockResult);
 
-      const result = await controller.enhancePrompt(mockDto);
+      const result = await controller.enhancePrompt(mockDto, mockRequest);
 
       expect(result).toBeDefined();
       // Note: The actual HTTP status is handled by NestJS decorators
@@ -245,6 +313,12 @@ describe('AiController', () => {
   });
 
   describe('input validation', () => {
+    const mockRequest = {
+      user: {
+        userId: 'test-user-123',
+      },
+    };
+
     it('should handle valid DTOs', async () => {
       const validDto = {
         prompt: 'Valid prompt',
@@ -256,10 +330,10 @@ describe('AiController', () => {
       const mockResult = { enhancedPrompt: 'Enhanced prompt' };
       mockAiService.enhancePrompt.mockResolvedValue(mockResult);
 
-      const result = await controller.enhancePrompt(validDto);
+      const result = await controller.enhancePrompt(validDto, mockRequest);
 
       expect(result.success).toBe(true);
-      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith(validDto);
+      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith('test-user-123', validDto);
     });
 
     it('should handle minimal DTOs', async () => {
@@ -270,10 +344,10 @@ describe('AiController', () => {
       const mockResult = { enhancedPrompt: 'Enhanced prompt' };
       mockAiService.enhancePrompt.mockResolvedValue(mockResult);
 
-      const result = await controller.enhancePrompt(minimalDto);
+      const result = await controller.enhancePrompt(minimalDto, mockRequest);
 
       expect(result.success).toBe(true);
-      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith(minimalDto);
+      expect(mockAiService.enhancePrompt).toHaveBeenCalledWith('test-user-123', minimalDto);
     });
   });
 }); 

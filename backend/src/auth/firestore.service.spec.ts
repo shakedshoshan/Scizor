@@ -36,8 +36,13 @@ describe('FirestoreService', () => {
   });
 
   it('should get firestore instance', () => {
+    // Mock the firestore property since real initialization requires Firebase credentials
+    const mockFirestore = {} as any;
+    (service as any).firestore = mockFirestore;
+    
     const firestore = service.getFirestore();
     expect(firestore).toBeDefined();
+    expect(firestore).toBe(mockFirestore);
   });
 
   it('should add text document', async () => {
@@ -88,7 +93,7 @@ describe('FirestoreService', () => {
     expect(mockWhere).toHaveBeenCalledWith('user_id', '==', 'test-user-123');
   });
 
-  it('should create user with 0 tokens', async () => {
+  it('should create user with 20 tokens and premium false', async () => {
     const mockData: CreateUserTokenDto = {
       user_id: 'test-user-123',
     };
@@ -112,7 +117,8 @@ describe('FirestoreService', () => {
     expect(mockCollection).toHaveBeenCalledWith('user_token');
     expect(mockAdd).toHaveBeenCalledWith({
       user_id: mockData.user_id,
-      tokens: 0,
+      tokens: 20,
+      is_premium: false,
       created_at: expect.any(Object),
       updated_at: expect.any(Object),
     });
@@ -133,6 +139,7 @@ describe('FirestoreService', () => {
     const userId = 'test-user-123';
     const updateData: UpdateUserTokenDto = {
       tokens: 100,
+      is_premium: false,
     };
 
     // Mock the userExists method to return true (user exists)
@@ -172,6 +179,7 @@ describe('FirestoreService', () => {
     const userId = 'test-user-123';
     const updateData: UpdateUserTokenDto = {
       tokens: 100,
+      is_premium: false,
     };
 
     // Mock the userExists method to return false (user doesn't exist)

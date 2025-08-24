@@ -13,6 +13,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { FirestoreService } from '../auth/firestore.service';
 import { AiService } from './ai.service';
 import { EnhancePromptDto, EnhancementType } from './dto/enhance-prompt.dto';
 import { GenerateResponseDto, ResponseType } from './dto/generate-response.dto';
@@ -39,6 +40,10 @@ describe('AiService', () => {
     get: jest.fn(),
   };
 
+  const mockFirestoreService = {
+    deductUserTokens: jest.fn().mockResolvedValue({ success: true, remainingTokens: 100 }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +51,10 @@ describe('AiService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: FirestoreService,
+          useValue: mockFirestoreService,
         },
       ],
     }).compile();
@@ -132,7 +141,6 @@ describe('AiService', () => {
 
   describe('enhancePrompt', () => {
     const mockEnhancePromptDto: EnhancePromptDto = {
-      user_id: 'test-user-id',
       prompt: 'Write a function',
       enhancementType: EnhancementType.CODE,
       context: 'JavaScript',
@@ -173,7 +181,7 @@ describe('AiService', () => {
 
       mockOpenAI.chat.completions.create.mockResolvedValue(mockResponse);
 
-      const result = await service.enhancePrompt(mockEnhancePromptDto);
+      const result = await service.enhancePrompt('test-user-id', mockEnhancePromptDto);
 
       expect(result).toEqual({
         enhancedPrompt: 'Enhanced prompt with more context and specificity',
@@ -198,7 +206,7 @@ describe('AiService', () => {
       };
       mockOpenAI.chat.completions.create.mockResolvedValue(mockResponse);
 
-      await service.enhancePrompt(dtoWithoutType);
+      await service.enhancePrompt('test-user-id', dtoWithoutType);
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -216,7 +224,7 @@ describe('AiService', () => {
       };
       mockOpenAI.chat.completions.create.mockRejectedValue(apiError);
 
-      await expect(service.enhancePrompt(mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
+      await expect(service.enhancePrompt('test-user-id', mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should handle rate limit errors', async () => {
@@ -226,14 +234,14 @@ describe('AiService', () => {
       };
       mockOpenAI.chat.completions.create.mockRejectedValue(rateLimitError);
 
-      await expect(service.enhancePrompt(mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
+      await expect(service.enhancePrompt('test-user-id', mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should handle general API errors', async () => {
       const generalError = new Error('Network error');
       mockOpenAI.chat.completions.create.mockRejectedValue(generalError);
 
-      await expect(service.enhancePrompt(mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
+      await expect(service.enhancePrompt('test-user-id', mockEnhancePromptDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should return original prompt if OpenAI returns no content', async () => {
@@ -242,7 +250,7 @@ describe('AiService', () => {
       };
       mockOpenAI.chat.completions.create.mockResolvedValue(mockResponse);
 
-      const result = await service.enhancePrompt(mockEnhancePromptDto);
+      const result = await service.enhancePrompt('test-user-id', mockEnhancePromptDto);
 
       expect(result.enhancedPrompt).toBe(mockEnhancePromptDto.prompt);
     });
@@ -250,7 +258,6 @@ describe('AiService', () => {
 
   describe('generateResponse', () => {
     const mockGenerateResponseDto: GenerateResponseDto = {
-      user_id: 'test-user-id',
       content: 'How do I implement a binary search?',
       responseType: ResponseType.EDUCATIONAL,
       context: 'Computer science fundamentals',
@@ -291,7 +298,7 @@ describe('AiService', () => {
 
       mockOpenAI.chat.completions.create.mockResolvedValue(mockResponse);
 
-      const result = await service.generateResponse(mockGenerateResponseDto);
+      const result = await service.generateResponse('test-user-id', mockGenerateResponseDto);
 
       expect(result).toEqual({
         response: 'Here is a comprehensive explanation of binary search...',
@@ -313,7 +320,7 @@ describe('AiService', () => {
       };
       mockOpenAI.chat.completions.create.mockResolvedValue(mockResponse);
 
-      const result = await service.generateResponse(mockGenerateResponseDto);
+      const result = await service.generateResponse('test-user-id', mockGenerateResponseDto);
 
       expect(result.response).toBe('Unable to generate response');
     });
@@ -426,13 +433,40 @@ describe('AiService', () => {
   });
 
   describe('textToSpeech', () => {
+    beforeEach(async () => {
+      // Setup successful initialization
+      mockConfigService.get
+        .mockReturnValueOnce('test-api-key') // For OPENAI_API_KEY
+        .mockReturnValueOnce('gpt-3.5-turbo') // For ENHANCE_PROMPT_MODEL
+        .mockReturnValueOnce('gpt-3.5-turbo'); // For GENERATE_RESPONSE_MODEL
+      
+      const mockOpenAIConstructor = require('openai').default;
+      mockOpenAI = {
+        chat: {
+          completions: {
+            create: jest.fn(),
+          },
+        },
+        audio: {
+          speech: {
+            create: jest.fn(),
+          },
+        },
+      };
+      
+      mockOpenAIConstructor.mockImplementation(() => mockOpenAI);
+      
+      // Initialize the service
+      await service['performInitialization']();
+    });
+
     it('should convert text to speech successfully', async () => {
       const mockAudioBuffer = Buffer.from('mock audio data');
       const mockResponse = {
         arrayBuffer: jest.fn().mockResolvedValue(mockAudioBuffer),
       };
 
-      jest.spyOn(service['openai'].audio.speech, 'create').mockResolvedValue(mockResponse);
+      mockOpenAI.audio.speech.create.mockResolvedValue(mockResponse);
 
       const textToSpeechDto = {
         user_id: 'test-user-id',
@@ -443,11 +477,11 @@ describe('AiService', () => {
         model: 'tts-1',
       };
 
-      const result = await service.textToSpeech(textToSpeechDto);
+      const result = await service.textToSpeech('test-user-id', textToSpeechDto);
 
       expect(result.audioBuffer).toEqual(mockAudioBuffer);
-      expect(result.format).toBe('mp3');
-      expect(service['openai'].audio.speech.create).toHaveBeenCalledWith({
+      expect(result.format).toBe('audio/mpeg');
+      expect(mockOpenAI.audio.speech.create).toHaveBeenCalledWith({
         model: 'tts-1',
         voice: 'alloy',
         input: 'Hello, world!',
@@ -459,11 +493,10 @@ describe('AiService', () => {
     it('should throw error for text longer than 4096 characters', async () => {
       const longText = 'a'.repeat(4097);
       const textToSpeechDto = {
-        user_id: 'test-user-id',
         text: longText,
       };
 
-      await expect(service.textToSpeech(textToSpeechDto)).rejects.toThrow(
+      await expect(service.textToSpeech('test-user-id', textToSpeechDto)).rejects.toThrow(
         'Text is too long. Maximum length is 4096 characters.',
       );
     });

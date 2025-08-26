@@ -525,16 +525,3 @@ n
 
 ---
 
-## 💼 What I'm Looking For
-
-I'm actively seeking opportunities as a **Full-Stack Developer** where I can:
-- Build scalable web applications using modern technologies
-- Contribute to innovative projects with real-world impact
-- Work with React, TypeScript, Node.js, and Python
-- Collaborate with talented teams on challenging problems
-- Continue learning and growing in a dynamic environment
-
----
-
-*This portfolio showcases my journey as a developer, from desktop applications to modern web development, game creation, and machine learning projects. Each project represents my commitment to writing clean, maintainable code and creating user-friendly applications.*
- 

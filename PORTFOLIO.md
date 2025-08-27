@@ -503,19 +503,12 @@ n
 
 ---
 
-## 🎓 Education & Experience
+## 🎓 Education 
 
 ### Education
 - **B.Sc. in Computer Science** - Afeka College of Engineering
 - **Former 8200 Electronics Practical Engineer** - Israeli Defense Forces
 
-### Professional Experience
-- **Full-Stack Development** - Building end-to-end web applications
-- **Desktop Application Development** - Creating productivity tools
-- **Game Development** - Developing interactive games and applications
-- **Machine Learning** - Implementing predictive models and recommendation systems
-
----
 
 ## 🔗 Connect With Me
 

@@ -46,6 +46,17 @@ export default function LemonEventsClient() {
               setTimeout(() => {
                 router.push('/pricing/thank-you');
               }, 500);
+            } else if (data?.event === 'Checkout.Closed') {
+              console.log('Checkout closed by user');
+              // The return_url parameter should handle navigation back to the website
+            } else if (data?.event === 'Checkout.Opened') {
+              console.log('Checkout opened');
+              console.log('Checkout data:', data);
+            } else if (data?.event === 'Checkout.Loaded') {
+              console.log('Checkout loaded');
+              console.log('Checkout data:', data);
+            } else if (data?.event === 'Checkout.Error') {
+              console.error('Checkout error:', data);
             }
           }
         });

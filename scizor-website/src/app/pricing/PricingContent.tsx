@@ -19,6 +19,30 @@ export default function PricingContent({ products, error }: PricingContentProps)
   const [userData, setUserData] = useState<any>(null);
   const [userDataLoading, setUserDataLoading] = useState(false);
   const [userDataError, setUserDataError] = useState<string | null>(null);
+  const [checkoutUrls, setCheckoutUrls] = useState<Record<string, string>>({});
+
+  // Update checkout URLs on client side to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const returnUrl = `${window.location.origin}/pricing`;
+      const newCheckoutUrls: Record<string, string> = {};
+      
+      products.forEach(({ product, variants }) => {
+        variants.forEach((variant: any) => {
+          const buyNowUrl = product.attributes?.buy_now_url || variant.attributes?.buy_now_url;
+          const url = buildCheckoutUrl(
+            variant.id, 
+            buyNowUrl, 
+            user?.email || undefined, 
+            returnUrl
+          );
+          newCheckoutUrls[variant.id] = url;
+        });
+      });
+      
+      setCheckoutUrls(newCheckoutUrls);
+    }
+  }, [products, user?.email]);
 
   // Fetch user data when user changes
   useEffect(() => {
@@ -238,7 +262,9 @@ export default function PricingContent({ products, error }: PricingContentProps)
             
             // Use buy_now_url from product or variant if available, otherwise build it
             const buyNowUrl = product.attributes?.buy_now_url || variant.attributes?.buy_now_url;
-            const checkoutHref = buildCheckoutUrl(variant.id, buyNowUrl);
+            
+            // Get checkout URL from state (will be populated by useEffect on client side)
+            const checkoutHref = checkoutUrls[variant.id] || '#';
             
             // Parse HTML description if available
             const rawDescription = product.attributes.description || '';
@@ -248,12 +274,17 @@ export default function PricingContent({ products, error }: PricingContentProps)
               <div key={variant.id} className="border border-gray-200 rounded-2xl p-6 shadow-sm">
                 <div className="flex justify-between items-start">
                   <h3 className="text-xl font-semibold text-gray-900">{displayName}</h3>
-                  {variantName && variantName !== 'Default' && productName !== variantName && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{variantName}</span>
-                  )}
-                  {variant.attributes?.test_mode && (
-                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded ml-1">Test Mode</span>
-                  )}
+                  <div className="flex gap-1">
+                    {user && userData && userData.is_premium && (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Current Plan</span>
+                    )}
+                    {variantName && variantName !== 'Default' && productName !== variantName && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{variantName}</span>
+                    )}
+                    {variant.attributes?.test_mode && (
+                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Test Mode</span>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="mt-1 text-3xl font-bold text-gray-900">{priceLabel}</p>
@@ -279,15 +310,29 @@ export default function PricingContent({ products, error }: PricingContentProps)
                 </ul>
                 
                 <div className="mt-8">
-                  <a
-                    className="lemonsqueezy-button bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 inline-flex items-center justify-center w-full"
-                    href={checkoutHref}
-                    data-ls-modal="checkout"
-                    data-ls-product={product.id}
-                    data-ls-variant={variant.id}
-                  >
-                    Get {displayName}
-                  </a>
+                  {user && userData && userData.is_premium ? (
+                    <button
+                      disabled
+                      className="bg-gray-100 border border-gray-300 text-gray-500 px-6 py-2 rounded-lg inline-flex items-center justify-center w-full cursor-not-allowed"
+                    >
+                      Already Subscribed
+                    </button>
+                  ) : (
+                    <a
+                      className="lemonsqueezy-button bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 inline-flex items-center justify-center w-full"
+                      href={checkoutHref}
+                      data-ls-modal="checkout"
+                      data-ls-product={product.id}
+                      data-ls-variant={variant.id}
+                    >
+                      Get {displayName}
+                    </a>
+                  )}
+                  {user && userData && userData.is_premium && (
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      You're already subscribed to a premium plan
+                    </p>
+                  )}
                 </div>
               </div>
             );

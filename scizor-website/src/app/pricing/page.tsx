@@ -4,6 +4,7 @@ import { fetchProductsWithVariants } from '@/utils/lemonsqueezy';
 import LemonEventsClient from './LemonEventsClient';
 import PricingContent from './PricingContent';
 
+
 export default async function PricingPage() {
   let products: any[] = [];
   let error = null;

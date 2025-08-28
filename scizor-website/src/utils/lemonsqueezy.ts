@@ -196,12 +196,21 @@ export function getVariantPriceLabel(variant: LemonVariant, prices: LemonPrice[]
   return 'See pricing';
 }
 
-export function buildCheckoutUrl(variantId: string, buyNowUrl?: string): string {
+export function buildCheckoutUrl(variantId: string, buyNowUrl?: string, userEmail?: string, returnUrl?: string): string {
   // If a direct buy_now_url is provided, use it (adding query params)
   if (buyNowUrl) {
     const url = new URL(buyNowUrl);
-    url.searchParams.set('embed', '1');
-    url.searchParams.set('media', '0');
+    
+    // Add user email if provided (prevents user from changing it)
+    if (userEmail) {
+      url.searchParams.set('checkout[email]', userEmail);
+    }
+    
+    // Add return URL for exit button navigation
+    if (returnUrl) {
+      url.searchParams.set('checkout[return_url]', returnUrl);
+    }
+    
     return url.toString();
   }
   
@@ -211,8 +220,21 @@ export function buildCheckoutUrl(variantId: string, buyNowUrl?: string): string 
     throw new Error('Missing NEXT_PUBLIC_LEMONSQUEEZY_STORE_DOMAIN');
   }
   
-  // Hosted checkout URL that Lemon.js can enhance to overlay
-  return `https://${storeDomain}.lemonsqueezy.com/checkout/buy/${variantId}`;
+  // Build the base checkout URL
+  const baseUrl = `https://${storeDomain}.lemonsqueezy.com/checkout/buy/${variantId}`;
+  const url = new URL(baseUrl);
+  
+  // Add user email if provided (prevents user from changing it)
+  if (userEmail) {
+    url.searchParams.set('checkout[email]', userEmail);
+  }
+  
+  // Add return URL for exit button navigation
+  if (returnUrl) {
+    url.searchParams.set('checkout[return_url]', returnUrl);
+  }
+  
+  return url.toString();
 }
 
 

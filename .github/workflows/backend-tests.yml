@@ -2,11 +2,11 @@ name: Backend Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master ]
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
     paths:
       - 'backend/**'
   

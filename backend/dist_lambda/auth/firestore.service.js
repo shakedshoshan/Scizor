@@ -182,6 +182,7 @@ let FirestoreService = FirestoreService_1 = class FirestoreService {
             const doc = querySnapshot.docs[0];
             await doc.ref.update({
                 tokens: updateData.tokens,
+                is_premium: updateData.is_premium,
                 updated_at: admin.firestore.FieldValue.serverTimestamp(),
             });
             return {

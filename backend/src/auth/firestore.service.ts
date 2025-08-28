@@ -239,6 +239,7 @@ export class FirestoreService implements OnModuleInit {
       // Update the document
       await doc.ref.update({
         tokens: updateData.tokens,
+        is_premium: updateData.is_premium,
         updated_at: admin.firestore.FieldValue.serverTimestamp(),
       });
 

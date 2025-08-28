@@ -7,7 +7,7 @@ export declare class PaymentService {
     private readonly logger;
     private readonly PRODUCT_CONFIG;
     constructor(firestoreService: FirestoreService, userLookupService: UserLookupService);
-    newSubscriber(userId: string): Promise<PaymentResponseDto>;
+    private newSubscriber;
     returnToFree(userId: string): Promise<PaymentResponseDto>;
     monthlyRenew(): Promise<MonthlyRenewResponseDto>;
     handleWebhook(webhookPayload: LemonSqueezyWebhookDto): Promise<WebhookResponseDto>;

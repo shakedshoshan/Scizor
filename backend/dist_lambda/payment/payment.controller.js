@@ -34,9 +34,6 @@ let PaymentController = class PaymentController {
         }
         return await this.paymentService.handleWebhook(webhookPayload);
     }
-    async newSubscriber(userIdDto) {
-        return await this.paymentService.newSubscriber(userIdDto.user_id);
-    }
     async returnToFree(userIdDto) {
         return await this.paymentService.returnToFree(userIdDto.user_id);
     }
@@ -55,14 +52,6 @@ __decorate([
     __metadata("design:paramtypes", [payment_dto_1.LemonSqueezyWebhookDto, String, Object]),
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "handleWebhook", null);
-__decorate([
-    (0, common_1.Post)('new-subscriber'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [payment_dto_1.UserIdDto]),
-    __metadata("design:returntype", Promise)
-], PaymentController.prototype, "newSubscriber", null);
 __decorate([
     (0, common_1.Post)('return-to-free'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

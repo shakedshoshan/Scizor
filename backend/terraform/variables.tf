@@ -41,3 +41,19 @@ variable "jwt_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "lemon_squeezy_webhook_secret" {
+  description = "Lemon Squeezy webhook secret for signature validation"
+  type        = string
+  sensitive   = true
+}
+
+variable "lemon_squeezy_pro_product_id" {
+  description = "Lemon Squeezy Pro/Premium product ID"
+  type        = string
+}
+
+variable "lemon_squeezy_standard_product_id" {
+  description = "Lemon Squeezy Standard product ID"
+  type        = string
+}

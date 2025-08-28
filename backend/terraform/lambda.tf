@@ -16,12 +16,15 @@ resource "aws_lambda_function" "scizor_ai_lambda" {
   # Environment variables for the Lambda function
   environment {
     variables = {
-      NODE_ENV            = "production"
-      OPENAI_API_KEY      = var.openai_api_key
-      FIREBASE_PROJECT_ID = var.firebase_project_id
-      FIREBASE_CLIENT_EMAIL = var.firebase_client_email
-      FIREBASE_PRIVATE_KEY  = local.firebase_private_key_formatted
-      JWT_SECRET          = var.jwt_secret
+      NODE_ENV                                = "production"
+      OPENAI_API_KEY                         = var.openai_api_key
+      FIREBASE_PROJECT_ID                    = var.firebase_project_id
+      FIREBASE_CLIENT_EMAIL                  = var.firebase_client_email
+      FIREBASE_PRIVATE_KEY                   = local.firebase_private_key_formatted
+      JWT_SECRET                             = var.jwt_secret
+      LEMON_SQUEEZY_WEBHOOK_SECRET          = var.lemon_squeezy_webhook_secret
+      LEMON_SQUEEZY_PRO_PRODUCT_ID          = var.lemon_squeezy_pro_product_id
+      LEMON_SQUEEZY_STANDARD_PRODUCT_ID     = var.lemon_squeezy_standard_product_id
     }
   }
 

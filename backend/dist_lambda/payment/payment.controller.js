@@ -15,11 +15,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentController = void 0;
 const common_1 = require("@nestjs/common");
 const payment_service_1 = require("./payment.service");
+const webhook_validator_service_1 = require("./webhook-validator.service");
 const payment_dto_1 = require("./dto/payment.dto");
 let PaymentController = class PaymentController {
     paymentService;
-    constructor(paymentService) {
+    webhookValidator;
+    constructor(paymentService, webhookValidator) {
         this.paymentService = paymentService;
+        this.webhookValidator = webhookValidator;
+    }
+    async handleWebhook(webhookPayload, signature, request) {
+        console.log('webhookPayload:', JSON.stringify(webhookPayload, null, 2));
+        if (signature && request?.rawBody) {
+            this.webhookValidator.validateOrThrow(signature, request.rawBody);
+        }
+        if (!webhookPayload.meta?.event_name || !webhookPayload.data) {
+            throw new common_1.BadRequestException('Invalid webhook payload structure');
+        }
+        return await this.paymentService.handleWebhook(webhookPayload);
     }
     async newSubscriber(userIdDto) {
         return await this.paymentService.newSubscriber(userIdDto.user_id);
@@ -32,6 +45,16 @@ let PaymentController = class PaymentController {
     }
 };
 exports.PaymentController = PaymentController;
+__decorate([
+    (0, common_1.Post)('subscription'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Headers)('x-signature')),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [payment_dto_1.LemonSqueezyWebhookDto, String, Object]),
+    __metadata("design:returntype", Promise)
+], PaymentController.prototype, "handleWebhook", null);
 __decorate([
     (0, common_1.Post)('new-subscriber'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -57,6 +80,7 @@ __decorate([
 ], PaymentController.prototype, "monthlyRenew", null);
 exports.PaymentController = PaymentController = __decorate([
     (0, common_1.Controller)('payment'),
-    __metadata("design:paramtypes", [payment_service_1.PaymentService])
+    __metadata("design:paramtypes", [payment_service_1.PaymentService,
+        webhook_validator_service_1.WebhookValidatorService])
 ], PaymentController);
 //# sourceMappingURL=payment.controller.js.map

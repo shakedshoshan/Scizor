@@ -14,20 +14,31 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirestoreService } from '../auth/firestore.service';
-import { PaymentResponseDto, MonthlyRenewResponseDto } from './dto/payment.dto';
+import { UserLookupService } from '../auth/user-lookup.service';
+import { PaymentResponseDto, MonthlyRenewResponseDto, LemonSqueezyWebhookDto, WebhookResponseDto } from './dto/payment.dto';
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
-  constructor(private readonly firestoreService: FirestoreService) {}
+  // Product mapping for your two products
+  private readonly PRODUCT_CONFIG = {
+    // Add your actual Lemon Squeezy product IDs here
+    PREMIUM_PRODUCT_ID: process.env.LEMON_SQUEEZY_PRO_PRODUCT_ID || '1', // Replace with actual ID
+    FREE_PRODUCT_ID: process.env.LEMON_SQUEEZY_STANDARD_PRODUCT_ID || '2', // Replace with actual ID
+  };
+
+  constructor(
+    private readonly firestoreService: FirestoreService,
+    private readonly userLookupService: UserLookupService,
+  ) {}
 
   /**
    * Convert user to premium subscriber
    * - Set tokens to 500
    * - Set is_premium to true
    */
-  async newSubscriber(userId: string): Promise<PaymentResponseDto> {
+  private async newSubscriber(userId: string): Promise<PaymentResponseDto> {
     try {
       this.logger.log(`Processing new subscriber: ${userId}`);
 
@@ -218,6 +229,198 @@ export class PaymentService {
       return {
         success: false,
         message: `Monthly renewal failed: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Handle Lemon Squeezy webhook events
+   * Processes subscription events and manages user subscriptions
+   */
+  async handleWebhook(webhookPayload: LemonSqueezyWebhookDto): Promise<WebhookResponseDto> {
+    try {
+      const { meta, data } = webhookPayload;
+      const eventName = meta.event_name;
+      const userId = meta.custom_data?.user_id;
+
+      this.logger.log(`Processing webhook event: ${eventName} for user: ${userId}`);
+
+      // If no user_id in custom_data, try to get it from email
+      let resolvedUserId = userId;
+      if (!resolvedUserId && data.attributes.user_email) {
+        this.logger.log(`No user_id in custom_data for event ${eventName}, looking up by email: ${data.attributes.user_email}`);
+        try {
+          const lookupResult = await this.userLookupService.getUserIdByEmail(data.attributes.user_email);
+          if (lookupResult) {
+            resolvedUserId = lookupResult;
+            this.logger.log(`Resolved user_id: ${resolvedUserId} for email: ${data.attributes.user_email}`);
+          } else {
+            this.logger.warn(`No user found for email: ${data.attributes.user_email}`);
+            return {
+              success: true,
+              message: 'Webhook received but no user found for email',
+              processed: false,
+            };
+          }
+        } catch (error) {
+          this.logger.error(`Failed to lookup user by email ${data.attributes.user_email}: ${error.message}`);
+          return {
+            success: false,
+            message: 'Failed to lookup user by email',
+            processed: false,
+          };
+        }
+      }
+
+      if (!resolvedUserId) {
+        this.logger.warn(`No user identifier found for event ${eventName}`);
+        return {
+          success: true,
+          message: 'Webhook received but no user identifier found',
+          processed: false,
+        };
+      }
+
+      switch (eventName) {
+        case 'subscription_created':
+        case 'subscription_updated':
+        case 'subscription_resumed':
+        case 'subscription_unpaused':
+          return await this.handleSubscriptionActivation(resolvedUserId, data);
+
+        case 'subscription_cancelled':
+        case 'subscription_expired':
+        case 'subscription_paused':
+          return await this.handleSubscriptionDeactivation(resolvedUserId, data);
+
+        case 'subscription_payment_success':
+        case 'subscription_payment_recovered':
+          return await this.handlePaymentSuccess(resolvedUserId, data);
+
+        case 'subscription_payment_failed':
+          this.logger.log(`Payment failed for user ${resolvedUserId}, maintaining current status`);
+          return {
+            success: true,
+            message: 'Payment failure logged, user status maintained',
+            processed: true,
+          };
+
+        default:
+          this.logger.log(`Unhandled webhook event: ${eventName}`);
+          return {
+            success: true,
+            message: `Event ${eventName} received but not processed`,
+            processed: false,
+          };
+      }
+    } catch (error) {
+      this.logger.error(`Webhook processing failed: ${error.message}`);
+      return {
+        success: false,
+        message: `Webhook processing failed: ${error.message}`,
+        processed: false,
+      };
+    }
+  }
+
+  /**
+   * Handle subscription activation events
+   */
+  private async handleSubscriptionActivation(userId: string, data: any): Promise<WebhookResponseDto> {
+    try {
+      const productId = data.attributes.product_id?.toString();
+      const status = data.attributes.status;
+
+      // Check if subscription is active
+      if (status !== 'active') {
+        this.logger.log(`Subscription not active for user ${userId}, status: ${status}`);
+        return {
+          success: true,
+          message: `Subscription status ${status} - no action taken`,
+          processed: false,
+        };
+      }
+
+      // Determine if this is a premium product
+      const isPremiumProduct = productId === this.PRODUCT_CONFIG.PREMIUM_PRODUCT_ID;
+      
+      if (isPremiumProduct) {
+        const result = await this.newSubscriber(userId);
+        return {
+          success: result.success,
+          message: result.message,
+          processed: result.success,
+        };
+      } else {
+        // Handle other products or free tier
+        const result = await this.returnToFree(userId);
+        return {
+          success: result.success,
+          message: result.message,
+          processed: result.success,
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Failed to handle subscription activation for user ${userId}: ${error.message}`);
+      return {
+        success: false,
+        message: `Failed to process subscription activation: ${error.message}`,
+        processed: false,
+      };
+    }
+  }
+
+  /**
+   * Handle subscription deactivation events
+   */
+  private async handleSubscriptionDeactivation(userId: string, data: any): Promise<WebhookResponseDto> {
+    try {
+      const result = await this.returnToFree(userId);
+      return {
+        success: result.success,
+        message: result.message,
+        processed: result.success,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to handle subscription deactivation for user ${userId}: ${error.message}`);
+      return {
+        success: false,
+        message: `Failed to process subscription deactivation: ${error.message}`,
+        processed: false,
+      };
+    }
+  }
+
+  /**
+   * Handle successful payment events (renewals)
+   */
+  private async handlePaymentSuccess(userId: string, data: any): Promise<WebhookResponseDto> {
+    try {
+      const productId = data.attributes.product_id?.toString();
+      const isPremiumProduct = productId === this.PRODUCT_CONFIG.PREMIUM_PRODUCT_ID;
+
+      if (isPremiumProduct) {
+        // Renew premium subscription (refresh tokens)
+        const result = await this.newSubscriber(userId);
+        return {
+          success: result.success,
+          message: `Premium subscription renewed: ${result.message}`,
+          processed: result.success,
+        };
+      } else {
+        this.logger.log(`Payment success for non-premium product, user ${userId}`);
+        return {
+          success: true,
+          message: 'Payment success processed for non-premium product',
+          processed: true,
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Failed to handle payment success for user ${userId}: ${error.message}`);
+      return {
+        success: false,
+        message: `Failed to process payment success: ${error.message}`,
+        processed: false,
       };
     }
   }

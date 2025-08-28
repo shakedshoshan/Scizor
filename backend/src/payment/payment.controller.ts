@@ -12,27 +12,50 @@
  * - Delegates business logic to payment service
  */
 
-import { Controller, Post, Body, HttpStatus, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, HttpStatus, HttpCode, Headers, BadRequestException, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { UserIdDto, PaymentResponseDto, MonthlyRenewResponseDto } from './dto/payment.dto';
+import { WebhookValidatorService } from './webhook-validator.service';
+import { UserIdDto, PaymentResponseDto, MonthlyRenewResponseDto, LemonSqueezyWebhookDto, WebhookResponseDto } from './dto/payment.dto';
 
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly webhookValidator: WebhookValidatorService,
+  ) {}
 
   /**
-   * POST /payment/new-subscriber
-   * Convert user to premium subscriber (500 tokens + premium status)
+   * POST /payment/subscription
+   * Unified Lemon Squeezy webhook endpoint
+   * Handles subscription_created, subscription_cancelled, subscription_updated, etc.
    */
-  @Post('new-subscriber')
+  @Post('subscription')
   @HttpCode(HttpStatus.OK)
-  async newSubscriber(@Body() userIdDto: UserIdDto): Promise<PaymentResponseDto> {
-    return await this.paymentService.newSubscriber(userIdDto.user_id);
+  async handleWebhook(
+    @Body() webhookPayload: LemonSqueezyWebhookDto,
+    @Headers('x-signature') signature?: string,
+    @Req() request?: any,
+  ): Promise<WebhookResponseDto> {
+    
+    console.log('webhookPayload:', JSON.stringify(webhookPayload, null, 2));
+    // Validate webhook signature for security
+    if (signature && request?.rawBody) {
+      this.webhookValidator.validateOrThrow(signature, request.rawBody);
+    }
+
+    // Validate webhook payload structure
+    if (!webhookPayload.meta?.event_name || !webhookPayload.data) {
+      throw new BadRequestException('Invalid webhook payload structure');
+    }
+
+    return await this.paymentService.handleWebhook(webhookPayload);
   }
+
 
   /**
    * POST /payment/return-to-free
    * Convert user to free subscriber (20 tokens + remove premium status)
+   * @deprecated Use webhook endpoint instead
    */
   @Post('return-to-free')
   @HttpCode(HttpStatus.OK)

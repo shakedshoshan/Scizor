@@ -55,9 +55,9 @@ locals {
   }
 
   payment_endpoints = {
-    # /payment/new-subscriber (POST)
-    "new-subscriber" = { method = "POST", parent = "payment" }
-    # /payment/return-to-free (POST)
+    # /payment/subscription (POST) - Unified Lemon Squeezy webhook endpoint
+    "subscription"   = { method = "POST", parent = "payment" }
+    # /payment/return-to-free (POST) - Deprecated but kept for backward compatibility
     "return-to-free" = { method = "POST", parent = "payment" }
     # /payment/monthly-renew (POST)
     "monthly-renew"  = { method = "POST", parent = "payment" }
@@ -70,7 +70,7 @@ locals {
   ]
 
   payment_cors_enabled = [
-    "new-subscriber",
+    "subscription",
     "return-to-free",
     "monthly-renew",
   ]

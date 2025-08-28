@@ -17,12 +17,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
+import { WebhookValidatorService } from './webhook-validator.service';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [ConfigModule, AuthModule],
   controllers: [PaymentController],
-  providers: [PaymentService],
+  providers: [PaymentService, WebhookValidatorService],
   exports: [PaymentService], // Export service for use in other modules if needed
 })
 export class PaymentModule {}

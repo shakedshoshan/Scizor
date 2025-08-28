@@ -14,7 +14,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     strategy:
       matrix:
@@ -34,6 +34,10 @@ jobs:
     - name: Install dependencies
       working-directory: ./backend
       run: npm ci
+      
+    - name: Lint code
+      working-directory: ./backend
+      run: npm run lint
       
     - name: Run tests
       working-directory: ./backend
@@ -59,3 +63,4 @@ jobs:
         echo "- Node version: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
         echo "- Working directory: backend/" >> $GITHUB_STEP_SUMMARY
         echo "- Test command: npm run test" >> $GITHUB_STEP_SUMMARY
+        echo "- Coverage command: npm run test:cov" >> $GITHUB_STEP_SUMMARY

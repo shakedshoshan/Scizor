@@ -273,16 +273,6 @@ n
 - **User Accounts:** Customer registration and profile management
 - **Admin Panel:** Backend management for store operations
 
-### 21. **Lendlord Home Exam** - Technical Assessment Project
-**Tech Stack:** JavaScript, Modern Web Technologies, API Development, Testing  
-**Description:** A technical assessment project demonstrating full-stack development capabilities and best practices.
-
-**Key Features:**
-- **Clean Architecture:** Well-structured codebase and design patterns
-- **API Development:** RESTful API design and implementation
-- **Testing:** Comprehensive test coverage and quality assurance
-- **Documentation:** Clear code documentation and setup instructions
-- **Performance:** Optimized application performance and scalability
 
 ### 22. **Currency Converter** - Financial Tools Application
 **Tech Stack:** TypeScript, Financial APIs, Real-time Data, Responsive Design  
@@ -296,17 +286,6 @@ n
 - **User Preferences:** Saved favorite currency pairs
 - **Mobile Optimization:** Touch-friendly interface and responsive design
 
-### 23. **ChatGPT Messenger Integration** - AI Communication Platform
-**Tech Stack:** TypeScript, OpenAI API, Real-time Communication, Message Processing  
-**Description:** An integration platform that enhances messaging capabilities with AI-powered responses and automation.
-
-**Key Features:**
-- **AI Integration:** OpenAI ChatGPT API integration for intelligent responses
-- **Message Processing:** Advanced text analysis and response generation
-- **Conversation Management:** Thread management and context preservation
-- **Custom Prompts:** User-defined conversation starters and templates
-- **Multi-platform Support:** Integration with various messaging platforms
-- **Privacy Controls:** Secure message handling and data protection
 
 ### 24. **Simple CRUD Application** - Database Management System
 **Tech Stack:** JavaScript, Database APIs, CRUD Operations, User Interface  
@@ -343,16 +322,6 @@ n
 - **Custom Styling:** Personalized themes and visual customization
 - **Cross-platform:** Consistent experience across different operating systems
 
-### 27. **Hello World** - TypeScript Learning Project
-**Tech Stack:** TypeScript, Modern Development Tools, Learning Framework  
-**Description:** A foundational TypeScript project demonstrating modern development practices and language features.
-
-**Key Features:**
-- **TypeScript Implementation:** Comprehensive use of TypeScript features
-- **Modern Tooling:** Integration with contemporary development tools
-- **Best Practices:** Clean code structure and development standards
-- **Documentation:** Clear code documentation and learning resources
-- **Extensibility:** Foundation for larger TypeScript projects
 
 ### 28. **House Prices Prediction Model** - Machine Learning Project
 **Tech Stack:** Python, Jupyter Notebook, Scikit-learn, Pandas, NumPy, Data Analysis  
@@ -413,93 +382,6 @@ n
 - **Real-time Updates:** Live data feeds and prediction adjustments
 - **User Community:** Social features and prediction sharing
 - **Performance Tracking:** Accuracy measurement and model improvement
-
-### 33. **Image Generator** - Creative AI Tool
-**Tech Stack:** JavaScript, AI APIs, Canvas API, Image Processing, Creative Algorithms  
-**Description:** An AI-powered image generation tool that creates unique visual content using advanced algorithms.
-
-**Key Features:**
-- **AI Integration:** Advanced image generation using machine learning models
-- **Custom Parameters:** User-defined generation settings and styles
-- **Real-time Generation:** Live image creation and preview capabilities
-- **Style Transfer:** Multiple artistic styles and visual effects
-- **High-resolution Output:** Quality image generation and export options
-- **Gallery Management:** Generated image storage and organization
-
-### 34. **Games Development** - Game Development Portfolio
-**Tech Stack:** JavaScript, HTML5 Canvas, Game Engines, Audio APIs, Physics Engines  
-**Description:** A comprehensive collection of browser-based games showcasing various game development techniques and creative concepts.
-
-**Key Features:**
-- **Multiple Genres:** Various game types including puzzle, action, and strategy
-- **Advanced Graphics:** HTML5 Canvas rendering with smooth animations
-- **Physics Engine:** Realistic game physics and collision detection
-- **Audio Integration:** Sound effects, background music, and audio feedback
-- **Performance Optimization:** Efficient rendering and smooth gameplay
-- **Mobile Compatibility:** Touch controls and responsive design
-
-### 35. **Chat App** - Real-time Communication Platform
-**Tech Stack:** JavaScript, WebSocket, Real-time APIs, User Authentication, Message Encryption  
-**Description:** A secure real-time chat application that enables instant communication with advanced features and privacy protection.
-
-**Key Features:**
-- **Real-time Messaging:** Instant message delivery with WebSocket technology
-- **User Authentication:** Secure login system with session management
-- **Message Encryption:** End-to-end encryption for privacy protection
-- **File Sharing:** Secure file and media sharing capabilities
-- **Group Chats:** Multi-user chat rooms and group management
-- **Message History:** Persistent chat history with search functionality
-
-### 36. **Book Store System** - E-commerce Platform
-**Tech Stack:** JavaScript, Database Management, Payment Processing, Inventory Management, User Management  
-**Description:** A comprehensive e-commerce platform for book sales with complete inventory, order, and customer management systems.
-
-**Key Features:**
-- **Product Catalog:** Comprehensive book database with advanced search and filtering
-- **Shopping Cart:** Secure cart management with persistent storage
-- **Payment Processing:** Multiple payment methods and secure transactions
-- **Inventory Management:** Real-time stock tracking and automated reordering
-- **Order Management:** Complete order lifecycle from cart to delivery
-- **Customer Accounts:** User registration, profiles, and order history
-- **Admin Panel:** Comprehensive backend management for store operations
-
-### 37. **Movie Recommender** - AI Recommendation System
-**Tech Stack:** TypeScript, Machine Learning, Recommendation Algorithms, Data Processing, User Interface  
-**Description:** An intelligent movie recommendation system that uses advanced algorithms to provide personalized content suggestions.
-
-**Key Features:**
-- **Collaborative Filtering:** User-based and item-based recommendation algorithms
-- **Content-Based Filtering:** Genre, director, actor, and keyword matching
-- **Hybrid Recommendations:** Combination of multiple recommendation strategies
-- **User Profiles:** Personalized preference learning and adaptation
-- **Rating System:** Multi-criteria rating and review functionality
-- **Movie Database:** Comprehensive movie information and metadata
-- **Recommendation Explanations:** Clear reasoning for suggested content
-
-### 38. **Lendlord Home Exam** - Technical Assessment Project
-**Tech Stack:** JavaScript, Modern Web Technologies, API Development, Testing, Documentation  
-**Description:** A technical assessment project that demonstrates full-stack development capabilities, clean architecture, and best practices.
-
-**Key Features:**
-- **Clean Architecture:** Well-structured codebase with design patterns
-- **API Development:** RESTful API design with comprehensive endpoints
-- **Testing Suite:** Unit tests, integration tests, and end-to-end testing
-- **Documentation:** Clear code documentation and setup instructions
-- **Performance Optimization:** Efficient application performance and scalability
-- **Code Quality:** Linting, formatting, and code review processes
-
-### 39. **Currency Converter** - Financial Tools Application
-**Tech Stack:** TypeScript, Financial APIs, Real-time Data, Responsive Design, Data Visualization  
-**Description:** A comprehensive currency conversion tool with live exchange rates, historical data, and advanced financial features.
-
-**Key Features:**
-- **Real-time Rates:** Live currency exchange rate updates from multiple sources
-- **Global Currencies:** Support for 150+ world currencies and cryptocurrencies
-- **Historical Data:** Exchange rate history with trend analysis and charts
-- **Offline Support:** Cached rates for offline functionality
-- **User Preferences:** Saved favorite currency pairs and custom alerts
-- **Mobile Optimization:** Touch-friendly interface with responsive design
-- **Data Export:** Export conversion history and rate data
 
 ---
 

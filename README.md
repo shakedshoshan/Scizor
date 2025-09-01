@@ -13,9 +13,8 @@ Scizor is an intelligent productivity suite that acts as your personal AI assist
 ### 🌟 Core Features
 
 #### 📋 Smart Clipboard Management
-- **Automatic Capture**: Seamlessly monitors your clipboard every 500ms without interrupting your workflow
 - **Intelligent Organization**: Automatically categorizes and organizes clipboard content for easy retrieval
-- **Smart History**: Maintains a 15-item history with duplicate prevention and intelligent deduplication
+- **Smart History**: Maintains a 100-item history with duplicate prevention and intelligent deduplication
 - **Instant Access**: One-click copying from history with global hotkey support
 - **Search & Filter**: Quickly find specific clipboard items with intelligent search algorithms
 - **Background Operation**: Silent monitoring that works across all applications without interference

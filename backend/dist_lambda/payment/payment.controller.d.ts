@@ -7,5 +7,5 @@ export declare class PaymentController {
     constructor(paymentService: PaymentService, webhookValidator: WebhookValidatorService);
     handleWebhook(webhookPayload: LemonSqueezyWebhookDto, signature?: string, request?: any): Promise<WebhookResponseDto>;
     returnToFree(userIdDto: UserIdDto): Promise<PaymentResponseDto>;
-    monthlyRenew(): Promise<MonthlyRenewResponseDto>;
+    monthlyRenew(webhookPayload: LemonSqueezyWebhookDto, signature?: string, request?: any): Promise<MonthlyRenewResponseDto>;
 }

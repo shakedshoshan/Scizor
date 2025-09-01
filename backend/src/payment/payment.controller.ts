@@ -65,12 +65,26 @@ export class PaymentController {
 
   /**
    * POST /payment/monthly-renew
-   * Monthly renewal for all premium users (webhook endpoint)
-   * Sets all premium users' tokens to 500
+   * Monthly renewal for individual premium users (webhook endpoint)
+   * Checks if user is premium and gives them 500 tokens if eligible
    */
   @Post('monthly-renew')
   @HttpCode(HttpStatus.OK)
-  async monthlyRenew(): Promise<MonthlyRenewResponseDto> {
-    return await this.paymentService.monthlyRenew();
+  async monthlyRenew(
+    @Body() webhookPayload: LemonSqueezyWebhookDto,
+    @Headers('x-signature') signature?: string,
+    @Req() request?: any,
+  ): Promise<MonthlyRenewResponseDto> {
+    // Validate webhook signature for security
+    if (signature && request?.rawBody) {
+      this.webhookValidator.validateOrThrow(signature, request.rawBody);
+    }
+
+    // Validate webhook payload structure
+    if (!webhookPayload.meta?.event_name || !webhookPayload.data) {
+      throw new BadRequestException('Invalid webhook payload structure');
+    }
+
+    return await this.paymentService.monthlyRenew(webhookPayload);
   }
 }

@@ -5,10 +5,12 @@ export declare class UserTokenDto {
     user_id: string;
     tokens: number;
     is_premium: boolean;
+    subscription_id?: string;
 }
 export declare class UpdateUserTokenDto {
     tokens: number;
     is_premium: boolean;
+    subscription_id?: string;
 }
 export declare class DeductTokenDto {
     user_id: string;

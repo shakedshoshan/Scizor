@@ -37,8 +37,14 @@ let PaymentController = class PaymentController {
     async returnToFree(userIdDto) {
         return await this.paymentService.returnToFree(userIdDto.user_id);
     }
-    async monthlyRenew() {
-        return await this.paymentService.monthlyRenew();
+    async monthlyRenew(webhookPayload, signature, request) {
+        if (signature && request?.rawBody) {
+            this.webhookValidator.validateOrThrow(signature, request.rawBody);
+        }
+        if (!webhookPayload.meta?.event_name || !webhookPayload.data) {
+            throw new common_1.BadRequestException('Invalid webhook payload structure');
+        }
+        return await this.paymentService.monthlyRenew(webhookPayload);
     }
 };
 exports.PaymentController = PaymentController;
@@ -63,8 +69,11 @@ __decorate([
 __decorate([
     (0, common_1.Post)('monthly-renew'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Headers)('x-signature')),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [payment_dto_1.LemonSqueezyWebhookDto, String, Object]),
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "monthlyRenew", null);
 exports.PaymentController = PaymentController = __decorate([

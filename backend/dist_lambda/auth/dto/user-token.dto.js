@@ -24,6 +24,7 @@ class UserTokenDto {
     user_id;
     tokens;
     is_premium;
+    subscription_id;
 }
 exports.UserTokenDto = UserTokenDto;
 __decorate([
@@ -41,9 +42,15 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", Boolean)
 ], UserTokenDto.prototype, "is_premium", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UserTokenDto.prototype, "subscription_id", void 0);
 class UpdateUserTokenDto {
     tokens;
     is_premium;
+    subscription_id;
 }
 exports.UpdateUserTokenDto = UpdateUserTokenDto;
 __decorate([
@@ -56,6 +63,11 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", Boolean)
 ], UpdateUserTokenDto.prototype, "is_premium", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UpdateUserTokenDto.prototype, "subscription_id", void 0);
 class DeductTokenDto {
     user_id;
     cost;

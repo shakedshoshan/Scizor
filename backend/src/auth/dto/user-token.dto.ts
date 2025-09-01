@@ -24,6 +24,10 @@ export class UserTokenDto {
   @IsBoolean()
   @IsNotEmpty()
   is_premium: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  subscription_id?: string;
 }
 
 export class UpdateUserTokenDto {
@@ -34,6 +38,10 @@ export class UpdateUserTokenDto {
   @IsBoolean()
   @IsNotEmpty()
   is_premium: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  subscription_id?: string;
 }
 
 export class DeductTokenDto {

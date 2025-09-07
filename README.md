@@ -522,6 +522,7 @@ npm run start
 Scizor uses a secure JWT-based authentication system with PKCE (Proof Key for Code Exchange) for desktop applications:
 
 ### 1. Website Authorization (OAuth2 + PKCE)
+
 ```
 User → Website (/auth/device) → Email/Google Login → Consent Page → JWT Token
 ```
